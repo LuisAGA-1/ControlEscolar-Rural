@@ -1,0 +1,72 @@
+@page
+@model ControlEscolar.Pages.LoginModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar sesión · Control Escolar Rural</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login">
+    <section class="login-portada">
+        <div class="marca">
+            <span class="escudo"><i class="bi bi-mortarboard-fill"></i></span>
+            <span><strong>Control Escolar</strong><small>Escuelas rurales · Chiapas</small></span>
+        </div>
+        <div class="login-mensaje">
+            <h1>Asistencia, calificaciones y alertas tempranas en un solo lugar.</h1>
+            <p>Plataforma para docentes y directivos de Berriozábal, Suchiapa y Ocozocoautla.</p>
+            <ul>
+                <li><i class="bi bi-calendar-check"></i> Pase de lista diario por grupo</li>
+                <li><i class="bi bi-journal-text"></i> Calificaciones por parcial</li>
+                <li><i class="bi bi-bell"></i> Avisos de rezago por Telegram</li>
+            </ul>
+        </div>
+        <small class="opacity-75">Ciclo escolar 2026-2027</small>
+    </section>
+
+    <section class="login-panel">
+        <form method="post" class="login-tarjeta" novalidate>
+            <h2>Iniciar sesión</h2>
+            <p class="text-muted mb-4">Ingresa con tu correo institucional.</p>
+
+            @if (Model.Error is not null)
+            {
+                <div class="alert alert-danger py-2" role="alert"><i class="bi bi-exclamation-circle"></i> @Model.Error</div>
+            }
+
+            <label class="form-label" for="Email">Correo electrónico</label>
+            <div class="input-group mb-3">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input asp-for="Email" type="email" class="form-control" placeholder="nombre@escuela.mx" autocomplete="username" required autofocus />
+            </div>
+
+            <label class="form-label" for="Password">Contraseña</label>
+            <div class="input-group mb-3">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" required />
+                <button class="btn btn-outline-secondary" type="button" aria-label="Mostrar contraseña"
+                        onclick="const p=document.getElementById('Password');p.type=p.type==='password'?'text':'password'">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
+
+            <div class="form-check mb-4">
+                <input asp-for="Recordar" class="form-check-input" />
+                <label asp-for="Recordar" class="form-check-label">Mantener la sesión iniciada</label>
+            </div>
+
+            <button class="btn btn-primario w-100 py-2">Entrar <i class="bi bi-arrow-right"></i></button>
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <p class="text-muted small mt-4 mb-0">¿Olvidaste tu contraseña? Solicítala a la dirección de tu escuela.</p>
+        </form>
+    </section>
+</body>
+</html>

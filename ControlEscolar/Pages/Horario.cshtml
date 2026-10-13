@@ -1,0 +1,43 @@
+@page
+@model HorarioModel
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Horario";
+}
+
+<div class="encabezado">
+    <div>
+        <h1>Horario semanal</h1>
+        <p class="text-muted mb-0">@Model.Clases.Count clases a la semana.</p>
+    </div>
+    <form method="get">
+        <label class="visually-hidden" for="Grupo">Grupo</label>
+        <select class="form-select" id="Grupo" name="Grupo" onchange="this.form.submit()">
+            @if (Model.Docente) { <option value="">Mis clases</option> }
+            @foreach (var g in Model.Grupos)
+            {
+                <option value="@g.Id" selected="@(g.Id.ToString() == Model.Grupo)">Grupo @g.Nombre</option>
+            }
+        </select>
+        <noscript><button class="btn btn-primario mt-2">Ver</button></noscript>
+    </form>
+</div>
+
+<div class="semana">
+    @foreach (var dia in HorarioModel.Dias)
+    {
+        var clases = Model.Clases.Where(c => c.Dia == dia).ToList();
+        <div class="dia @(dia == Ui.DiaDeHoy ? "hoy" : "")">
+            <h2>@Ui.Dia(dia) @if (dia == Ui.DiaDeHoy) { <span class="badge">Hoy</span> }</h2>
+            @if (clases.Count == 0) { <p class="vacio small">Sin clases</p> }
+            @foreach (var c in clases)
+            {
+                <div class="bloque">
+                    <small>@c.Inicio – @c.Fin</small>
+                    <strong>@c.Materia</strong>
+                    <small>Grupo @c.Grupo · @c.Docente</small>
+                </div>
+            }
+        </div>
+    }
+</div>

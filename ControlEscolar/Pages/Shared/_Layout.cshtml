@@ -1,0 +1,88 @@
+@using ControlEscolar.Services
+@{
+    var u = User.Identity?.IsAuthenticated == true ? User.Actual() : null; // Error y Conexion se ven sin sesión
+    var actual = ViewContext.RouteData.Values["page"]?.ToString();
+    var menu = new (string Pagina, string Icono, string Texto)[]
+    {
+        ("/Index", "bi-grid-1x2", "Inicio"),
+        ("/Asistencia", "bi-calendar-check", "Pase de lista"),
+        ("/Calificaciones", "bi-journal-text", "Calificaciones"),
+        ("/Alumnos", "bi-people", "Alumnos"),
+        ("/Horario", "bi-clock", "Horario"),
+        ("/Alertas", "bi-exclamation-triangle", "Alertas de rezago"),
+    };
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Control Escolar Rural</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="app">
+    <aside class="sidebar" id="sidebar">
+        <a class="marca" asp-page="/Index">
+            <span class="escudo"><i class="bi bi-mortarboard-fill"></i></span>
+            <span><strong>Control Escolar</strong><small>Escuelas rurales · Chiapas</small></span>
+        </a>
+        <nav>
+            <span class="seccion">Menú principal</span>
+            @foreach (var m in menu)
+            {
+                <a asp-page="@m.Pagina" class="@(actual == m.Pagina ? "activo" : "")" aria-current="@(actual == m.Pagina ? "page" : null)">
+                    <i class="bi @m.Icono"></i> @m.Texto
+                </a>
+            }
+        </nav>
+        <div class="pie-sidebar">Ciclo escolar 2026-2027</div>
+    </aside>
+
+    <div class="contenido">
+        <header class="topbar">
+            <button class="btn btn-link d-lg-none menu-btn" type="button" aria-label="Abrir menú"
+                    onclick="document.getElementById('sidebar').classList.toggle('abierto')">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="migas">
+                <span class="text-muted">Control Escolar</span> <i class="bi bi-chevron-right"></i> <strong>@ViewData["Title"]</strong>
+            </div>
+            @if (u is not null)
+            {
+            <div class="dropdown ms-auto">
+                <button class="usuario" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="avatar">@Ui.Iniciales(u.Nombre)</span>
+                    <span class="d-none d-sm-block text-start">
+                        <strong>@u.Nombre</strong><small>@Ui.Rol(u.Rol)</small>
+                    </span>
+                    <i class="bi bi-chevron-down small"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow">
+                    <span class="dropdown-item-text small text-muted">@u.Email</span>
+                    <div class="dropdown-divider"></div>
+                    <form method="post" asp-page="/Logout">
+                        <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+                    </form>
+                </div>
+            </div>
+            }
+        </header>
+
+        <main class="pagina">
+            @if (TempData["Mensaje"] is string mensaje)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="status">
+                    <i class="bi bi-check-circle"></i> @mensaje
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

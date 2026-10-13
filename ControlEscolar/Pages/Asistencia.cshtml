@@ -1,0 +1,81 @@
+@page
+@model AsistenciaModel
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Pase de lista";
+}
+
+<div class="encabezado">
+    <div>
+        <h1>Pase de lista</h1>
+        <p class="text-muted mb-0">Marca la asistencia del grupo. Al guardar se revisan las alertas de rezago.</p>
+    </div>
+</div>
+
+<form method="get" class="filtros tarjeta">
+    <div>
+        <label class="form-label" for="Grupo">Grupo</label>
+        <select class="form-select" id="Grupo" name="Grupo" onchange="this.form.submit()">
+            @foreach (var g in Model.Grupos)
+            {
+                <option value="@g.Id" selected="@(g.Id == Model.Grupo)">@g.Nombre · @g.Ciclo</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="Fecha">Fecha</label>
+        <input class="form-control" type="date" id="Fecha" name="Fecha" value="@Model.Fecha?.ToString("yyyy-MM-dd")"
+               max="@Model.Hoy.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+    </div>
+</form>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+@if (Model.Filas.Count == 0)
+{
+    <div class="tarjeta"><p class="vacio">No hay alumnos en este grupo.</p></div>
+}
+else
+{
+    <form method="post" asp-route-Grupo="@Model.Grupo" asp-route-Fecha="@Model.Fecha?.ToString("yyyy-MM-dd")" class="tarjeta p-0">
+        <div class="tabla-acciones">
+            <span><strong>@Model.Filas.Count</strong> alumnos · @Model.Filas.Count(f => f.Estado is not null) con lista guardada</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="document.querySelectorAll('.fila-alumno').forEach(f=>{if(!f.querySelector('input:checked'))f.querySelector('input[value=presente]').checked=true})">
+                <i class="bi bi-check2-all"></i> Faltantes como presentes
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table tabla mb-0">
+                <thead><tr><th>#</th><th>Alumno</th><th>Asistencia</th></tr></thead>
+                <tbody>
+                    @{ var n = 0; }
+                    @foreach (var f in Model.Filas)
+                    {
+                        n++;
+                        <tr class="fila-alumno">
+                            <td class="text-muted">@n</td>
+                            <td><span class="avatar chico">@Ui.Iniciales(f.Alumno)</span> @f.Alumno</td>
+                            <td>
+                                <div class="estados" role="radiogroup" aria-label="Asistencia de @f.Alumno">
+                                    @foreach (var e in Ui.Estados)
+                                    {
+                                        var id = $"e-{f.AlumnoId}-{e.Valor}";
+                                        <input type="radio" class="btn-check" name="Estados[@f.AlumnoId]" id="@id" value="@e.Valor" checked="@(f.Estado == e.Valor)" />
+                                        <label class="btn estado-@e.Valor" for="@id" title="@e.Texto">@e.Letra<span class="d-none d-md-inline">@e.Texto[1..]</span></label>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-acciones justify-content-end">
+            <button class="btn btn-primario"><i class="bi bi-save"></i> Guardar lista</button>
+        </div>
+    </form>
+}

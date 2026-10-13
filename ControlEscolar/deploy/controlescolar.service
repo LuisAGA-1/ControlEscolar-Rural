@@ -1,0 +1,17 @@
+# /etc/systemd/system/controlescolar.service  -  arranca la app al prender el servidor y la reinicia si se cae
+[Unit]
+Description=Control Escolar (ASP.NET Core)
+After=network.target
+
+[Service]
+User=controlescolar
+WorkingDirectory=/opt/controlescolar
+ExecStart=/usr/bin/dotnet /opt/controlescolar/ControlEscolar.dll --urls http://127.0.0.1:5000
+Restart=always
+RestartSec=5
+Environment=ASPNETCORE_ENVIRONMENT=Production
+# Aquí van la cadena de conexión a RDS y el token del bot (no se suben a GitHub)
+EnvironmentFile=/etc/controlescolar.env
+
+[Install]
+WantedBy=multi-user.target

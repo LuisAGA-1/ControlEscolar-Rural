@@ -1,0 +1,61 @@
+@page
+@model AlumnosModel
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Alumnos";
+}
+
+<div class="encabezado">
+    <div>
+        <h1>Alumnos</h1>
+        <p class="text-muted mb-0">@Model.Alumnos.Count alumnos · faltas del mes y promedio general.</p>
+    </div>
+</div>
+
+<form method="get" class="filtros tarjeta">
+    <div class="flex-grow-1">
+        <label class="form-label" for="Buscar">Buscar</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input class="form-control" id="Buscar" name="Buscar" value="@Model.Buscar" placeholder="Nombre o CURP" />
+        </div>
+    </div>
+    <div>
+        <label class="form-label" for="Grupo">Grupo</label>
+        <select class="form-select" id="Grupo" name="Grupo" onchange="this.form.submit()">
+            <option value="">Todos</option>
+            @foreach (var g in Model.Grupos)
+            {
+                <option value="@g.Id" selected="@(g.Id.ToString() == Model.Grupo)">@g.Nombre</option>
+            }
+        </select>
+    </div>
+    <div class="align-self-end"><button class="btn btn-primario">Filtrar</button></div>
+</form>
+
+<div class="tarjeta p-0">
+    <div class="table-responsive">
+        <table class="table tabla mb-0">
+            <thead><tr><th>Alumno</th><th>Grupo</th><th>Tutor</th><th class="text-center">Faltas del mes</th><th class="text-center">Promedio</th></tr></thead>
+            <tbody>
+                @if (Model.Alumnos.Count == 0)
+                {
+                    <tr><td colspan="5" class="vacio">No se encontraron alumnos.</td></tr>
+                }
+                @foreach (var a in Model.Alumnos)
+                {
+                    <tr>
+                        <td><span class="avatar chico">@Ui.Iniciales(a.Nombre)</span> <strong>@a.Nombre</strong><small class="d-block text-muted ms-5">@a.Curp</small></td>
+                        <td><span class="etiqueta-estado azul">@a.Grupo</span></td>
+                        <td>@a.TutorNombre<small class="d-block text-muted">@a.TutorTelefono</small></td>
+                        <td class="text-center"><span class="etiqueta-estado @(a.FaltasMes >= 3 ? "rojo" : "gris")">@a.FaltasMes</span></td>
+                        <td class="text-center">
+                            @if (a.Promedio is decimal p) { <span class="etiqueta-estado @(p < 6 ? "rojo" : "verde")">@p.ToString("0.0")</span> }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

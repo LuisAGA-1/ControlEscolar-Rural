@@ -1,0 +1,94 @@
+@page
+@model CalificacionesModel
+@using System.Globalization
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Calificaciones";
+    var conValor = Model.Filas.Where(f => f.Calificacion is not null).ToList();
+}
+
+<div class="encabezado">
+    <div>
+        <h1>Calificaciones</h1>
+        <p class="text-muted mb-0">Captura por materia y parcial, de 0 a 10. Un promedio menor a 6 genera alerta.</p>
+    </div>
+</div>
+
+<form method="get" class="filtros tarjeta">
+    <div>
+        <label class="form-label" for="Grupo">Grupo</label>
+        <select class="form-select" id="Grupo" name="Grupo" onchange="this.form.submit()">
+            @foreach (var g in Model.Grupos)
+            {
+                <option value="@g.Id" selected="@(g.Id == Model.Grupo)">@g.Nombre · @g.Ciclo</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="Materia">Materia</label>
+        <select class="form-select" id="Materia" name="Materia" onchange="this.form.submit()">
+            @foreach (var m in Model.Materias)
+            {
+                <option value="@m.Id" selected="@(m.Id == Model.Materia)">@m.Nombre</option>
+            }
+        </select>
+    </div>
+    <div>
+        <span class="form-label d-block">Parcial</span>
+        <div class="btn-group" role="group" aria-label="Parcial">
+            @for (var p = 1; p <= 3; p++)
+            {
+                <a class="btn @(p == Model.Parcial ? "btn-primario" : "btn-outline-secondary")"
+                   asp-route-Grupo="@Model.Grupo" asp-route-Materia="@Model.Materia" asp-route-Parcial="@p">@p</a>
+            }
+        </div>
+    </div>
+    <div class="ms-md-auto text-md-end">
+        <small class="text-muted d-block">Promedio del grupo</small>
+        <strong class="fs-4">@(conValor.Count > 0 ? conValor.Average(f => f.Calificacion!.Value).ToString("0.0") : "—")</strong>
+    </div>
+</form>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
+}
+
+@if (Model.Filas.Count == 0)
+{
+    <div class="tarjeta"><p class="vacio">No hay alumnos en este grupo.</p></div>
+}
+else
+{
+    <form method="post" asp-route-Grupo="@Model.Grupo" asp-route-Materia="@Model.Materia" asp-route-Parcial="@Model.Parcial" class="tarjeta p-0">
+        <div class="table-responsive">
+            <table class="table tabla mb-0">
+                <thead><tr><th>#</th><th>Alumno</th><th style="width:170px">Calificación</th><th>Estado</th></tr></thead>
+                <tbody>
+                    @{ var n = 0; }
+                    @foreach (var f in Model.Filas)
+                    {
+                        n++;
+                        var valor = Model.Valores.GetValueOrDefault(f.AlumnoId) ?? f.Calificacion?.ToString("0.##", CultureInfo.InvariantCulture);
+                        <tr>
+                            <td class="text-muted">@n</td>
+                            <td><span class="avatar chico">@Ui.Iniciales(f.Alumno)</span> @f.Alumno</td>
+                            <td>
+                                <input class="form-control calificacion" type="number" min="0" max="10" step="0.1" inputmode="decimal"
+                                       name="Valores[@f.AlumnoId]" value="@valor" aria-label="Calificación de @f.Alumno" />
+                            </td>
+                            <td>
+                                @if (f.Calificacion is null) { <span class="etiqueta-estado gris">Sin capturar</span> }
+                                else if (f.Calificacion < 6) { <span class="etiqueta-estado rojo">Reprobado</span> }
+                                else { <span class="etiqueta-estado verde">Aprobado</span> }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-acciones justify-content-end">
+            <button class="btn btn-primario"><i class="bi bi-save"></i> Guardar calificaciones</button>
+        </div>
+    </form>
+}

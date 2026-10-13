@@ -1,0 +1,26 @@
+:root { font-family: system-ui, sans-serif; color: #1d2b25; background: #f4f7f5; }
+body { margin: 0; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 16px; background: #1f6f50; color: #fff; }
+header .usuario { margin-left: auto; }
+header a { color: #fff; }
+.ok { color: #b8f5d0; } .off { color: #ffd27a; }
+nav { display: flex; gap: 4px; padding: 8px 16px 0; overflow-x: auto; }
+nav button.activa { background: #1f6f50; color: #fff; }
+main { padding: 16px; max-width: 900px; overflow-x: auto; }
+button { padding: 6px 12px; border: 1px solid #9bb5a8; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; }
+button:disabled { opacity: .5; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #dde7e1; }
+.estados button { min-width: 40px; margin-right: 4px; }
+.sel.presente { background: #2e9d6a; color: #fff; } .sel.falta { background: #c8473d; color: #fff; }
+.sel.retardo { background: #d99a1e; color: #fff; } .sel.justificada { background: #4b7bb8; color: #fff; }
+.filtros { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+input[type=number] { width: 80px; }
+input:invalid { border: 2px solid #c8473d; background: #fdecea; }
+.aviso { margin: 8px 16px 0; font-size: .9em; color: #44574d; }
+.nota { font-size: .85em; color: #5b6e64; }
+.alerta { list-style: none; padding: 8px; margin: 6px 0; border-left: 5px solid; background: #fff; }
+.alerta.amarilla { border-color: #d99a1e; } .alerta.roja { border-color: #c8473d; }
+.login { max-width: 320px; margin: 15vh auto; display: grid; gap: 12px; padding: 0 16px; }
+.login input { display: block; width: 100%; padding: 8px; box-sizing: border-box; }
+.error { color: #c8473d; }

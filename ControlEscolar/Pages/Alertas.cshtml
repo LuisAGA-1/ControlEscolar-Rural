@@ -1,0 +1,54 @@
+@page
+@model AlertasModel
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Alertas de rezago";
+}
+
+<div class="encabezado">
+    <div>
+        <h1>Alertas de rezago</h1>
+        <p class="text-muted mb-0">Se generan solas: 3 faltas seguidas, más de 20 % de faltas en el mes o promedio menor a 6.</p>
+    </div>
+    <div class="btn-group" role="group" aria-label="Filtro">
+        <a asp-route-Todas="false" class="btn @(!Model.Todas ? "btn-primario" : "btn-outline-secondary")">Abiertas</a>
+        <a asp-route-Todas="true" class="btn @(Model.Todas ? "btn-primario" : "btn-outline-secondary")">Todas</a>
+    </div>
+</div>
+
+@if (Model.Alertas.Count == 0)
+{
+    <div class="tarjeta"><p class="vacio"><i class="bi bi-emoji-smile"></i> No hay alertas @(Model.Todas ? "" : "abiertas").</p></div>
+}
+<div class="row g-3">
+    @foreach (var a in Model.Alertas)
+    {
+        <div class="col-md-6 col-xl-4">
+            <div class="alerta-tarjeta @a.Nivel @(a.Atendida ? "atendida" : "")">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="etiqueta-estado @(a.Nivel == "roja" ? "rojo" : "ambar")">
+                        <i class="bi bi-exclamation-triangle-fill"></i> @Ui.TipoAlerta(a.Tipo)
+                    </span>
+                    <small class="text-muted">@a.Fecha.ToString("dd/MM/yyyy")</small>
+                </div>
+                <h3>@a.Alumno</h3>
+                <p class="text-muted mb-3">Grupo @a.Grupo · @a.Detalle</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-telegram"></i> @(a.Enviada ? "Avisada por Telegram" : "Aviso pendiente")
+                    </small>
+                    @if (a.Atendida)
+                    {
+                        <span class="etiqueta-estado verde"><i class="bi bi-check2"></i> Atendida</span>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Atender" asp-route-id="@a.Id" asp-route-Todas="@Model.Todas">
+                            <button class="btn btn-sm btn-outline-success"><i class="bi bi-check2"></i> Marcar atendida</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

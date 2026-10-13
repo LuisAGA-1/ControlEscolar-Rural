@@ -1,0 +1,132 @@
+@page
+@model IndexModel
+@using ControlEscolar.Services
+@{
+    ViewData["Title"] = "Inicio";
+    var u = User.Actual();
+    var r = Model.Resumen;
+}
+
+<section class="bienvenida">
+    <div>
+        <p class="mb-1 opacity-75">@Ui.FechaLarga(DateTime.Now)</p>
+        <h1>@Ui.Saludo, @u.Nombre.Split(' ')[0]</h1>
+        <p class="mb-0 opacity-75">
+            @(u.Rol == "docente" ? "Este es el resumen de tus grupos." : "Este es el resumen de toda la escuela.")
+        </p>
+    </div>
+    <a asp-page="/Asistencia" class="btn btn-dorado"><i class="bi bi-calendar-check"></i> Pasar lista de hoy</a>
+</section>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="kpi"><span class="kpi-icono azul"><i class="bi bi-people"></i></span>
+            <div><small>Alumnos activos</small><strong>@r.Alumnos</strong></div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="kpi"><span class="kpi-icono morado"><i class="bi bi-collection"></i></span>
+            <div><small>Grupos</small><strong>@r.Grupos</strong></div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="kpi"><span class="kpi-icono verde"><i class="bi bi-check2-circle"></i></span>
+            <div><small>Asistencia de hoy</small><strong>@(r.AsistenciaHoy is int pct ? $"{pct}%" : "Sin lista")</strong></div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <a asp-page="/Alertas" class="kpi enlace"><span class="kpi-icono rojo"><i class="bi bi-exclamation-triangle"></i></span>
+            <div><small>Alertas abiertas</small><strong>@r.AlertasAbiertas</strong></div></a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="tarjeta h-100">
+            <div class="tarjeta-titulo">
+                <h2>Asistencia de los últimos días</h2>
+                <span class="text-muted small">% de alumnos presentes</span>
+            </div>
+            @if (r.Tendencia.Count == 0)
+            {
+                <p class="vacio">Todavía no hay listas registradas.</p>
+            }
+            else
+            {
+                <div class="barras" role="img" aria-label="Porcentaje de asistencia por día">
+                    @foreach (var d in r.Tendencia)
+                    {
+                        <div class="barra">
+                            <span class="valor">@d.Porcentaje%</span>
+                            <span class="columna @(d.Porcentaje < 80 ? "baja" : "")" style="height:@(Math.Max(d.Porcentaje, 4))%"></span>
+                            <span class="etiqueta">@Ui.FechaCorta(d.Fecha)</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="tarjeta h-100">
+            <div class="tarjeta-titulo">
+                <h2>Alertas de rezago</h2>
+                <a asp-page="/Alertas" class="small">Ver todas</a>
+            </div>
+            @if (Model.Alertas.Count == 0)
+            {
+                <p class="vacio"><i class="bi bi-emoji-smile"></i> Sin alertas abiertas.</p>
+            }
+            <ul class="lista-alertas">
+                @foreach (var a in Model.Alertas)
+                {
+                    <li>
+                        <span class="punto @a.Nivel"></span>
+                        <div>
+                            <strong>@a.Alumno</strong> <span class="text-muted">· @a.Grupo</span>
+                            <small>@Ui.TipoAlerta(a.Tipo): @a.Detalle</small>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    @if (u.Rol == "docente")
+    {
+        <div class="col-lg-7">
+            <div class="tarjeta h-100">
+                <div class="tarjeta-titulo">
+                    <h2>Clases de hoy</h2>
+                    <a asp-page="/Horario" class="small">Horario completo</a>
+                </div>
+                @if (Model.ClasesHoy.Count == 0)
+                {
+                    <p class="vacio">No hay clases registradas para hoy.</p>
+                }
+                @foreach (var c in Model.ClasesHoy)
+                {
+                    <div class="clase">
+                        <span class="hora">@c.Inicio<small>@c.Fin</small></span>
+                        <div><strong>@c.Materia</strong><small>Grupo @c.Grupo · @c.Docente</small></div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="@(u.Rol == "docente" ? "col-lg-5" : "col-12")">
+        <div class="tarjeta h-100">
+            <div class="tarjeta-titulo"><h2>@(u.Rol == "docente" ? "Mis grupos" : "Pase de lista de hoy por grupo")</h2></div>
+            <div class="grupos @(u.Rol == "docente" ? "" : "rejilla")">
+                @foreach (var g in Model.Grupos)
+                {
+                    <a asp-page="/Alumnos" asp-route-grupo="@g.Id" class="grupo">
+                        <span class="grupo-grado">@g.Nombre</span>
+                        <span><strong>@g.Grado° grado, grupo @g.Letra</strong><small>@g.Alumnos alumnos · <span class="text-nowrap">@g.Ciclo</span></small></span>
+                        @if (g.ListaHoy > 0 && g.ListaHoy >= g.Alumnos) { <span class="etiqueta-estado verde ms-auto"><i class="bi bi-check2"></i> Tomada</span> }
+                        else if (g.ListaHoy > 0) { <span class="etiqueta-estado ambar ms-auto">@g.ListaHoy de @g.Alumnos</span> }
+                        else { <span class="etiqueta-estado gris ms-auto">Pendiente</span> }
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

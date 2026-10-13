@@ -1,0 +1,14 @@
+# Compilados
+bin/
+obj/
+publish/
+*.tar.gz
+.vs/
+# Secretos: nunca subir contraseñas ni el token del bot
+appsettings.json
+appsettings.Development.json
+.env
+*.pem
+# Node
+node_modules/
+dist/
