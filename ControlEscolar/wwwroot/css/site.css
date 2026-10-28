@@ -19,6 +19,8 @@
   --pastilla: 200px;
   --sombra: rgba(40, 46, 62, .1) 0 4px 16px 0;
   --sombra-sm: rgba(40, 46, 62, .1) 0 2px 4px 0;
+  --sombra-lg: rgba(40, 46, 62, .16) 0 12px 28px -6px;
+  --suave: cubic-bezier(.2, .8, .2, 1);
   /* Pasteles decorativos de las tarjetas de función; nunca en botones ni menús */
   --cian: #d3f4fb;
   --magenta: #fde2f3;
@@ -105,13 +107,11 @@ h1 { font-size: 2rem; line-height: 1.28; }
 .kpi-icono.verde { background: var(--durazno); }
 .kpi-icono.rojo { background: var(--magenta); color: var(--rojo); }
 
-.barras { display: flex; align-items: flex-end; gap: 12px; height: 220px; padding-top: 8px; }
-.barra { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 8px; min-width: 0; }
-.barra .columna { width: 100%; max-width: 40px; border-radius: 4px 4px 0 0; background: var(--iris); }
-.barra .columna.baja { background: var(--rojo); }
-.barra .valor { font-size: .75rem; font-weight: 600; }
-.barra .etiqueta { font-size: .75rem; color: var(--gris); text-align: center; line-height: 1.2; }
-@media (max-width: 575px) { .barras { gap: 6px; } }
+/* Contenedor de Chart.js: la altura la pone el CSS, la gráfica se ajusta */
+.grafica { position: relative; height: 260px; }
+.grafica.baja { height: 200px; }
+.grafica.dona { height: 240px; }
+.grafica.alta { height: 320px; }
 
 .lista-alertas { list-style: none; padding: 0; margin: 0; }
 .lista-alertas li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--borde); }
@@ -169,6 +169,29 @@ h1 { font-size: 2rem; line-height: 1.28; }
 .alerta-tarjeta.roja { border-top-color: var(--rojo); }
 .alerta-tarjeta.atendida { opacity: .65; }
 .alerta-tarjeta h3 { font-size: 1.125rem; font-weight: 600; margin: 0 0 2px; }
+
+/* ---------- Profundidad y movimiento ---------- */
+.tarjeta, .kpi, .grupo, .alerta-tarjeta, .dia { box-shadow: var(--sombra-sm); transition: transform .25s var(--suave), box-shadow .25s var(--suave), border-color .25s; }
+.tarjeta:hover { box-shadow: var(--sombra); }
+.kpi:hover, .grupo:hover, .alerta-tarjeta:hover, .dia:hover { transform: translateY(-3px); box-shadow: var(--sombra-lg); }
+.bienvenida { background: linear-gradient(120deg, var(--lila) 0%, var(--lila-2) 55%, var(--cian) 100%); position: relative; overflow: hidden; }
+.bienvenida::after { content: ""; position: absolute; right: -60px; top: -80px; width: 260px; height: 260px; border-radius: 50%; background: rgba(255, 255, 255, .35); pointer-events: none; }
+.bienvenida > * { position: relative; z-index: 1; }
+.kpi-icono.azul { background: linear-gradient(135deg, var(--cian), #a9e6f3); }
+.kpi-icono.morado { background: linear-gradient(135deg, var(--lila-2), #c3c9ff); }
+.kpi-icono.verde { background: linear-gradient(135deg, var(--durazno), #ffd2b3); }
+.kpi-icono.rojo { background: linear-gradient(135deg, var(--magenta), #fbc6e6); }
+.btn-primario, .btn-dorado { transition: background .2s, transform .2s var(--suave), box-shadow .2s; }
+.btn-primario:hover, .btn-dorado:hover { transform: translateY(-1px); box-shadow: var(--sombra); }
+.btn-primario:active, .btn-dorado:active { transform: none; }
+.sidebar nav a, .tabla tbody tr { transition: background .15s; }
+.btn-check:checked + .btn { animation: rebote .3s var(--suave); }
+.aparece { animation: aparece .5s var(--suave) backwards; }
+@keyframes aparece { from { opacity: 0; transform: translateY(12px); } }
+@keyframes rebote { 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 
 /* ---------- Login ---------- */
 .login { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; margin: 0; }

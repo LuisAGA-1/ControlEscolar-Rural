@@ -1,6 +1,7 @@
-@page
+﻿@page
 @model IndexModel
 @using ControlEscolar.Services
+@using System.Text.Json
 @{
     ViewData["Title"] = "Inicio";
     var u = User.Actual();
@@ -37,8 +38,8 @@
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-lg-7">
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
         <div class="tarjeta h-100">
             <div class="tarjeta-titulo">
                 <h2>Asistencia de los últimos días</h2>
@@ -50,16 +51,50 @@
             }
             else
             {
-                <div class="barras" role="img" aria-label="Porcentaje de asistencia por día">
-                    @foreach (var d in r.Tendencia)
-                    {
-                        <div class="barra">
-                            <span class="valor">@d.Porcentaje%</span>
-                            <span class="columna @(d.Porcentaje < 80 ? "baja" : "")" style="height:@(Math.Max(d.Porcentaje, 4))%"></span>
-                            <span class="etiqueta">@Ui.FechaCorta(d.Fecha)</span>
-                        </div>
-                    }
-                </div>
+                <div class="grafica"><canvas role="img" aria-label="Asistencia por día: @string.Join(", ", r.Tendencia.Select(d => $"{Ui.FechaCorta(d.Fecha)} {d.Porcentaje}%"))"
+                    data-grafica="@JsonSerializer.Serialize(new { tipo = "line", max = 100, limite = 80, sufijo = "%",
+                        etiquetas = r.Tendencia.Select(d => Ui.FechaCorta(d.Fecha)),
+                        series = new[] { new { nombre = "Asistencia", color = "iris", valores = r.Tendencia.Select(d => d.Porcentaje) } } })"></canvas></div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="tarjeta h-100">
+            <div class="tarjeta-titulo"><h2>Lista de hoy</h2></div>
+            @if (Model.EstadosHoy.Count == 0)
+            {
+                <p class="vacio">Todavía no se pasa lista hoy.</p>
+            }
+            else
+            {
+                var estados = Ui.Estados.Select(e => (e.Texto, N: Model.EstadosHoy.FirstOrDefault(x => x.Estado == e.Valor).Alumnos)).ToList();
+                <div class="grafica dona"><canvas role="img" aria-label="Lista de hoy: @string.Join(", ", estados.Select(e => $"{e.N} {e.Texto}"))"
+                    data-grafica="@JsonSerializer.Serialize(new { tipo = "doughnut",
+                        etiquetas = estados.Select(e => e.Texto),
+                        series = new[] { new { nombre = "Alumnos", colores = new[] { "verde", "rojo", "ambar", "iris" }, valores = estados.Select(e => e.N) } } })"></canvas></div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="tarjeta h-100">
+            <div class="tarjeta-titulo">
+                <h2>Promedio por materia</h2>
+                <span class="text-muted small">Todos los parciales</span>
+            </div>
+            @if (Model.Promedios.Count == 0)
+            {
+                <p class="vacio">Todavía no hay calificaciones capturadas.</p>
+            }
+            else
+            {
+                <div class="grafica alta"><canvas role="img" aria-label="Promedio por materia: @string.Join(", ", Model.Promedios.Select(p => $"{p.Materia} {p.Promedio}"))"
+                    data-grafica="@JsonSerializer.Serialize(new { tipo = "bar", horizontal = true, max = 10, limite = 6,
+                        etiquetas = Model.Promedios.Select(p => p.Materia),
+                        series = new[] { new { nombre = "Promedio", color = "iris", valores = Model.Promedios.Select(p => p.Promedio) } } })"></canvas></div>
             }
         </div>
     </div>
@@ -130,3 +165,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.js"></script>
+}

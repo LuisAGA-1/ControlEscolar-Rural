@@ -71,6 +71,21 @@ public class EscolarRepository
         return new Resumen(conteos.Item1, conteos.Item2, conteos.Item3, conteos.Item4, tendencia);
     }
 
+    public Task<List<(string Estado, long Alumnos)>> EstadosHoyAsync(UsuarioActual u) => Lista(u, $"""
+        SELECT s.estado::text, count(*)
+          FROM asistencias s JOIN alumnos a ON a.id = s.alumno_id JOIN grupos g ON g.id = a.grupo_id
+         WHERE s.fecha = CURRENT_DATE AND a.activo AND {FILTRO}
+         GROUP BY s.estado ORDER BY s.estado
+        """, r => (r.GetString(0), r.GetInt64(1)));
+
+    public Task<List<(string Materia, decimal Promedio)>> PromediosPorMateriaAsync(UsuarioActual u) => Lista(u, $"""
+        SELECT m.nombre, round(avg(c.calificacion), 1)
+          FROM calificaciones c JOIN materias m ON m.id = c.materia_id
+          JOIN alumnos a ON a.id = c.alumno_id JOIN grupos g ON g.id = a.grupo_id
+         WHERE a.activo AND {FILTRO}
+         GROUP BY m.nombre ORDER BY m.nombre
+        """, r => (r.GetString(0), r.GetDecimal(1)));
+
     public Task<List<Alerta>> AlertasAsync(UsuarioActual u, bool incluirAtendidas, int limite = 200) => Lista(u, $"""
         SELECT r.id, a.nombre, g.grado || '°' || g.letra, r.tipo::text, r.nivel::text, r.detalle, r.enviada, r.atendida, r.created_at
           FROM alertas_rezago r JOIN alumnos a ON a.id = r.alumno_id JOIN grupos g ON g.id = a.grupo_id
