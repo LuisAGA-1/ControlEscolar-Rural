@@ -1,10 +1,13 @@
-@page
+﻿@page
 @model CalificacionesModel
 @using System.Globalization
 @using ControlEscolar.Services
+@using System.Text.Json
 @{
     ViewData["Title"] = "Calificaciones";
     var conValor = Model.Filas.Where(f => f.Calificacion is not null).ToList();
+    string[] rangos = ["0 a 5.9", "6 a 6.9", "7 a 7.9", "8 a 8.9", "9 a 10"];
+    var porRango = rangos.Select((_, i) => conValor.Count(f => Math.Clamp((int)f.Calificacion!.Value - 5, 0, 4) == i)).ToList();
 }
 
 <div class="encabezado">
@@ -49,6 +52,19 @@
     </div>
 </form>
 
+@if (conValor.Count > 0)
+{
+    <div class="tarjeta">
+        <div class="tarjeta-titulo">
+            <h2>¿Cómo va el grupo?</h2>
+            <span class="text-muted small">Alumnos por rango de calificación</span>
+        </div>
+        <div class="grafica baja"><canvas role="img" aria-label="Alumnos por rango: @string.Join(", ", rangos.Select((t, i) => $"{t}: {porRango[i]}"))"
+            data-grafica="@JsonSerializer.Serialize(new { tipo = "bar", etiquetas = rangos,
+                series = new[] { new { nombre = "Alumnos", colores = new[] { "rojo", "ambar", "iris", "iris", "verde" }, valores = porRango } } })"></canvas></div>
+    </div>
+}
+
 @if (Model.Error is not null)
 {
     <div class="alert alert-danger" role="alert">@Model.Error</div>
@@ -91,4 +107,8 @@ else
             <button class="btn btn-primario"><i class="bi bi-save"></i> Guardar calificaciones</button>
         </div>
     </form>
+}
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.js"></script>
 }
