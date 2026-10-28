@@ -1,8 +1,13 @@
-@page
+﻿@page
 @model AlertasModel
 @using ControlEscolar.Services
+@using System.Text.Json
 @{
     ViewData["Title"] = "Alertas de rezago";
+    // Últimas 8 semanas, de lunes a domingo
+    var lunes = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7));
+    var semanas = Enumerable.Range(0, 8).Select(i => lunes.AddDays(7 * (i - 7))).ToList();
+    int Cuenta(DateTime s, string nivel) => Model.Alertas.Count(a => a.Nivel == nivel && a.Fecha >= s && a.Fecha < s.AddDays(7));
 }
 
 <div class="encabezado">
@@ -15,6 +20,21 @@
         <a asp-route-Todas="true" class="btn @(Model.Todas ? "btn-primario" : "btn-outline-secondary")">Todas</a>
     </div>
 </div>
+
+@if (Model.Alertas.Count > 0)
+{
+    <div class="tarjeta">
+        <div class="tarjeta-titulo">
+            <h2>Alertas por semana</h2>
+            <span class="text-muted small">Últimas 8 semanas</span>
+        </div>
+        <div class="grafica baja"><canvas role="img" aria-label="Alertas por semana: @string.Join(", ", semanas.Select(s => $"{s:dd/MM}: {Cuenta(s, "roja") + Cuenta(s, "amarilla")}"))"
+            data-grafica="@JsonSerializer.Serialize(new { tipo = "bar", apilada = true, etiquetas = semanas.Select(s => s.ToString("dd/MM")),
+                series = new[] {
+                    new { nombre = "Rojas", color = "rojo", valores = semanas.Select(s => Cuenta(s, "roja")) },
+                    new { nombre = "Amarillas", color = "ambar", valores = semanas.Select(s => Cuenta(s, "amarilla")) } } })"></canvas></div>
+    </div>
+}
 
 @if (Model.Alertas.Count == 0)
 {
@@ -52,3 +72,7 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.js"></script>
+}
