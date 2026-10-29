@@ -21,6 +21,11 @@
   --sombra-sm: rgba(40, 46, 62, .1) 0 2px 4px 0;
   --sombra-lg: rgba(40, 46, 62, .16) 0 12px 28px -6px;
   --suave: cubic-bezier(.2, .8, .2, 1);
+  /* Fondo de la app: para usar una foto (de la escuela, de Chiapas) guárdala en wwwroot/img y cambia solo esta línea. */
+  --foto-fondo: url("../img/fondo-chiapas.svg");
+  --vidrio: rgba(255, 255, 255, .62);
+  --vidrio-fuerte: rgba(255, 255, 255, .86);
+  --borde-vidrio: rgba(255, 255, 255, .75);
   /* Pasteles decorativos de las tarjetas de función; nunca en botones ni menús */
   --cian: #d3f4fb;
   --magenta: #fde2f3;
@@ -220,4 +225,38 @@ h1 { font-size: 2rem; line-height: 1.28; }
   .login-portada { padding: 24px 16px; }
   .login-mensaje h1 { font-size: 1.5rem; }
   .login-mensaje ul, .login-portada > small { display: none; }
+}
+
+/* ---------- Vidrio (glassmorphism claro) ---------- */
+/* La foto va en una capa fija aparte: background-attachment: fixed es lento o se ignora en celulares. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(rgba(246, 247, 251, .35), rgba(246, 247, 251, .55)), var(--foto-fondo) center / cover no-repeat, var(--fondo);
+}
+body { background: transparent; }
+.sidebar, .topbar, .tarjeta, .kpi, .grupo, .alerta-tarjeta, .dia, .bienvenida, .dropdown-menu, .login-mensaje li {
+  background: var(--vidrio);
+  border: 1px solid var(--borde-vidrio);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.sidebar { border-width: 0 1px 0 0; }
+.topbar { border-width: 0 0 1px; box-shadow: var(--sombra-sm); }
+.alerta-tarjeta { border-top: 4px solid var(--ambar); }
+.alerta-tarjeta.roja { border-top-color: var(--rojo); }
+.dia.hoy { border-color: var(--iris); }
+.bienvenida { background: linear-gradient(120deg, rgba(237, 239, 255, .78), rgba(255, 255, 255, .45)); }
+.bienvenida::after { background: rgba(255, 255, 255, .4); }
+/* Donde se captura o se lee mucho texto, el vidrio va casi opaco */
+.tarjeta:has(table), .tarjeta:has(.form-select), .login-panel { background: var(--vidrio-fuerte); }
+.tabla { --bs-table-bg: transparent; }
+.tabla thead th { background: transparent; }
+.tabla tbody tr:hover, .clase { background: rgba(255, 255, 255, .55); }
+.grupos .grupo { background: rgba(255, 255, 255, .5); }
+.encabezado h1, .encabezado p { text-shadow: 0 1px 12px rgba(255, 255, 255, .9); }
+.login-portada { background: transparent; }
+.login-panel { -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+/* Navegadores sin desenfoque: paneles casi blancos para que el texto se lea igual */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar, .topbar, .tarjeta, .kpi, .grupo, .alerta-tarjeta, .dia, .bienvenida, .dropdown-menu, .login-panel { background: rgba(255, 255, 255, .94); }
 }
