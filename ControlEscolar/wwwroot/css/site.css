@@ -254,7 +254,7 @@ body { background: transparent; }
 .tabla tbody tr:hover, .clase { background: rgba(255, 255, 255, .55); }
 .grupos .grupo { background: rgba(255, 255, 255, .5); }
 .encabezado h1, .encabezado p { text-shadow: 0 1px 12px rgba(255, 255, 255, .9); }
-.login-portada { background: transparent; }
+.login-portada { background: rgba(246, 247, 251, .5); }
 .login-panel { -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
 /* Navegadores sin desenfoque: paneles casi blancos para que el texto se lea igual */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
