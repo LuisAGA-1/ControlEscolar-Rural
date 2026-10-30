@@ -16,9 +16,11 @@ para Telegram. Probado con Ubuntu 24.04 en WSL. Los mismos pasos sirven en un se
 Ubuntu 24.04 en WSL ya trae systemd. En la terminal de Ubuntu:
 ```bash
 sudo apt update && sudo apt install -y docker.io docker-compose-v2 git
-sudo usermod -aG docker $USER      # cierra y vuelve a abrir la terminal
+sudo usermod -aG docker $USER
 docker run --rm hello-world        # comprobar
 ```
+Si sale `permission denied ... docker.sock`, el permiso aún no se aplicó: cerrar la ventana no basta en WSL.
+Ejecuta `wsl --shutdown` en PowerShell y abre Ubuntu de nuevo (o, solo para esa terminal, `newgrp docker`).
 Si ya usas Docker Desktop en Windows con la integración de WSL activada, sáltate este paso.
 
 ## 2. Código y claves
