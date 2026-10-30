@@ -1,0 +1,87 @@
+# Toda la plataforma en Ubuntu/WSL: docker compose up -d   (ver INSTALACION.md)
+# Valores en .env (copia .env.example). Las imágenes van con versión fija para que no cambien solas.
+name: control-escolar
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: control_escolar
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?pon DB_PASSWORD en .env}
+      TZ: America/Mexico_City
+    volumes:
+      - datos-db:/var/lib/postgresql/data
+      # Solo la primera vez (volumen vacío): esquema y datos de prueba, en orden alfabético.
+      - ./database:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${PUERTO_DB:-5433}:5432" # para pgAdmin/psql desde Windows o WSL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d control_escolar"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?pon JWT_SECRET en .env}
+      BOT_API_TOKEN: ${BOT_API_TOKEN:?pon BOT_API_TOKEN en .env}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      URL_PUBLICA: ${URL_PUBLICA:-http://localhost:8080}
+      TZ: America/Mexico_City
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_BOT_TELEGRAM: ${VITE_BOT_TELEGRAM:-}
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "${PUERTO_WEB:-8080}:80"
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    restart: unless-stopped
+    volumes:
+      - modelos-ollama:/root/.ollama
+
+  # Descarga el modelo una vez (queda en el volumen) y termina.
+  ollama-modelo:
+    image: ollama/ollama:0.12.6
+    depends_on: [ollama]
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["sh", "-c", "sleep 3 && ollama pull ${OLLAMA_MODELO:-qwen2.5:3b}"]
+    restart: "no"
+
+  n8n:
+    image: n8nio/n8n:2.45.7
+    restart: unless-stopped
+    depends_on: [api, ollama]
+    environment:
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      GENERIC_TIMEZONE: America/Mexico_City
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      TZ: America/Mexico_City
+    volumes:
+      - datos-n8n:/home/node/.n8n
+    ports:
+      - "127.0.0.1:5678:5678"
+
+  # Dirección https pública para que Telegram llegue a n8n (cambia cada vez que se recrea este servicio).
+  tunel:
+    image: cloudflare/cloudflared:2025.10.0
+    restart: unless-stopped
+    depends_on: [n8n]
+    command: tunnel --no-autoupdate --url http://n8n:5678
+
+volumes:
+  datos-db:
+  modelos-ollama:
+  datos-n8n:

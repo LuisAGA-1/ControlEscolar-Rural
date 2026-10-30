@@ -27,7 +27,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/api/bot/contexto",
+        "url": "http://api:3000/api/bot/contexto",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: String($json.message.chat.id), texto: $json.message.text ?? '' }) }}",
@@ -86,7 +86,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:11434/api/chat",
+        "url": "http://ollama:11434/api/chat",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'qwen2.5:3b', stream: false, format: 'json', options: { temperature: 0 }, messages: [ { role: 'system', content: $json.instrucciones }, { role: 'user', content: $('Telegram').item.json.message.text ?? '' } ] }) }}",
@@ -108,7 +108,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3000/api/bot/responder",
+        "url": "http://api:3000/api/bot/responder",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ chat_id: String($('Telegram').item.json.message.chat.id), texto: $('Telegram').item.json.message.text ?? '', ia: $json.message?.content ?? '' }) }}",
