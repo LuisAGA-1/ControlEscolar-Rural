@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
     depends_on: [api, ollama]
     environment:
-      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      N8N_WEBHOOK_URL: ${WEBHOOK_URL:-} # n8n 2.x ya no lee WEBHOOK_URL
       GENERIC_TIMEZONE: America/Mexico_City
       N8N_DIAGNOSTICS_ENABLED: "false"
       TZ: America/Mexico_City
