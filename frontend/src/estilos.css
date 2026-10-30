@@ -203,6 +203,8 @@ button:disabled { cursor: default; opacity: .55; }
 .tramite { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; margin-bottom: 0; }
 .tramite h2 { font-size: 1.125rem; }
 .tramite p { margin: 0; }
+.codigo-telegram { font-size: 2rem; font-weight: 700; letter-spacing: .3em; color: var(--iris); font-variant-numeric: tabular-nums; }
+.ejemplos-bot { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; }
 .rejilla-tarjetas + .tarjeta, .rejilla-tarjetas + .rejilla-kpi { margin-top: 24px; }
 
 .barra { display: inline-flex; align-items: center; gap: 8px; width: 100%; max-width: 220px; }

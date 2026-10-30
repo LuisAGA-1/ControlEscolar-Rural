@@ -1,0 +1,332 @@
+{
+  "name": "Bot Control Escolar (SIAE)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "4165eb29-0184-4347-bb2d-a9d1c2c45288",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "367672c8-ec11-42d8-9919-bf6e44ba3b48",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Bot Control Escolar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/bot/contexto",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: String($json.message.chat.id), texto: $json.message.text ?? '' }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "5dbe6cd4-07f7-4d55-943a-78eb58120068",
+      "name": "Contexto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "API Control Escolar (X-Bot-Token)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "6996ff6d-d7c2-4513-899f-9b4717fcfa92",
+              "leftValue": "={{ $json.listo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ef28950f-7215-4400-a05b-21a267c42515",
+      "name": "¿Ya hay respuesta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'qwen2.5:3b', stream: false, format: 'json', options: { temperature: 0 }, messages: [ { role: 'system', content: $json.instrucciones }, { role: 'user', content: $('Telegram').item.json.message.text ?? '' } ] }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "5bbefce0-c241-43f8-9af6-7212af34c56a",
+      "name": "Ollama",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        400
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Cambia el modelo aquí si usas otro (ollama list)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/api/bot/responder",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: String($('Telegram').item.json.message.chat.id), texto: $('Telegram').item.json.message.text ?? '', ia: $json.message?.content ?? '' }) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "9e4002ce-0d8e-41d9-b4d6-59707cec935d",
+      "name": "Responder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "API Control Escolar (X-Bot-Token)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "36080bde-55e6-407e-aa00-ffb4c37cecd7",
+              "leftValue": "={{ !!$json.archivo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ad3179ce-44d3-40f0-abc6-82354528119b",
+      "name": "¿Trae PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "archivo.base64",
+        "options": {
+          "fileName": "={{ $json.archivo.nombre }}",
+          "mimeType": "application/pdf"
+        }
+      },
+      "id": "f2b91686-0ccd-4f83-b767-9c2beb4461e8",
+      "name": "PDF",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Telegram').item.json.message.chat.id }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "={{ $('Responder').item.json.texto }}"
+        }
+      },
+      "id": "8e18eb2d-04aa-4bbd-8d4a-ebc9eb30715a",
+      "name": "Enviar PDF",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Bot Control Escolar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram').item.json.message.chat.id }}",
+        "text": "={{ $json.texto }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "52df3a97-5d88-40b9-b559-5c30687232c9",
+      "name": "Enviar texto",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Bot Control Escolar"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto": {
+      "main": [
+        [
+          {
+            "node": "¿Ya hay respuesta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya hay respuesta?": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder": {
+      "main": [
+        [
+          {
+            "node": "¿Trae PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Trae PDF?": {
+      "main": [
+        [
+          {
+            "node": "PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF": {
+      "main": [
+        [
+          {
+            "node": "Enviar PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

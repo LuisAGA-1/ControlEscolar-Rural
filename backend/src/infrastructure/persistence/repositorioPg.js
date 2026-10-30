@@ -36,13 +36,14 @@ export function crearRepositorioPg(pool) {
   const filas = async (sql, params) => (await pool.query(sql, params)).rows;
 
   return {
-    async buscarUsuario({ email, matricula }) {
+    async buscarUsuario({ email, matricula, chatId }) {
       return (
         await filas(
           `SELECT u.*, a.id AS alumno_id, a.matricula
              FROM usuarios u LEFT JOIN alumnos a ON a.usuario_id = u.id
-            WHERE ($1::text IS NOT NULL AND lower(u.email) = $1) OR ($2::text IS NOT NULL AND a.matricula = $2)`,
-          [email ?? null, matricula ?? null]
+            WHERE ($1::text IS NOT NULL AND lower(u.email) = $1) OR ($2::text IS NOT NULL AND a.matricula = $2)
+               OR ($3::text IS NOT NULL AND u.telegram_chat_id = $3)`,
+          [email ?? null, matricula ?? null, chatId ?? null]
         )
       )[0];
     },
@@ -263,6 +264,27 @@ export function crearRepositorioPg(pool) {
 
     marcarAlertaEnviada: (id) =>
       pool.query('UPDATE alertas_rezago SET enviada = TRUE, enviada_at = NOW() WHERE id = $1', [id]),
+
+    async guardarVinculacion(usuarioId, codigo, expira) {
+      await pool.query(
+        `INSERT INTO vinculaciones_telegram (usuario_id, codigo, expira_at) VALUES ($1, $2, $3)
+         ON CONFLICT (usuario_id) DO UPDATE SET codigo = EXCLUDED.codigo, expira_at = EXCLUDED.expira_at`,
+        [usuarioId, codigo, expira]
+      );
+    },
+
+    async consumirVinculacion(codigo, ahora) {
+      const r = await filas(
+        'DELETE FROM vinculaciones_telegram WHERE codigo = $1 AND expira_at > $2 RETURNING usuario_id',
+        [codigo, ahora]
+      );
+      return r.length === 1 ? r[0].usuario_id : undefined; // dos códigos iguales vigentes: que pidan otro
+    },
+
+    async asignarChat(usuarioId, chatId) {
+      await pool.query('UPDATE usuarios SET telegram_chat_id = NULL WHERE telegram_chat_id = $2 AND id <> $1', [usuarioId, chatId]);
+      await pool.query('UPDATE usuarios SET telegram_chat_id = $2 WHERE id = $1', [usuarioId, chatId]);
+    },
 
     alertasDe: (u) =>
       filas(

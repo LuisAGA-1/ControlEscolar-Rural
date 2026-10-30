@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { ErrorValidacion } from '../../domain/registros.js';
 import { ErrorPermiso } from '../../domain/permisos.js';
 
-export function crearApp({ casos, secreto, ping }) {
+export function crearApp({ casos, secreto, ping, asistente, tokenBot }) {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '2mb' }));
@@ -30,6 +30,12 @@ export function crearApp({ casos, secreto, ping }) {
     }
   }
 
+  // Solo n8n conoce este token; el chat_id lo pone Telegram, no el usuario.
+  function servicioBot(req, res, next) {
+    if (!tokenBot || req.headers['x-bot-token'] !== tokenBot) return res.status(401).json({ error: 'Token del bot no válido' });
+    next();
+  }
+
   app.get('/api/health', ruta(ping));
   app.post('/api/auth/login', ruta((req) => casos.iniciarSesion(req.body.usuario ?? req.body.email, req.body.password)));
   app.get('/api/catalogo', autenticado, ruta((req) => casos.catalogo(req.usuario)));
@@ -45,5 +51,8 @@ export function crearApp({ casos, secreto, ping }) {
   app.get('/api/reportes/escuela', autenticado, ruta((req) => casos.reporteEscuela(req.usuario)));
   app.get('/api/reportes/grupo/:id', autenticado, ruta((req) => casos.reporteGrupo(req.usuario, req.params.id)));
   app.get('/api/alertas', autenticado, ruta((req) => casos.alertas(req.usuario)));
+  app.post('/api/telegram/codigo', autenticado, ruta((req) => casos.codigoTelegram(req.usuario)));
+  app.post('/api/bot/contexto', servicioBot, ruta((req) => asistente.contexto(req.body)));
+  app.post('/api/bot/responder', servicioBot, ruta((req) => asistente.responder(req.body)));
   return app;
 }

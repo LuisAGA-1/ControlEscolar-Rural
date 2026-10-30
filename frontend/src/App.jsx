@@ -13,6 +13,7 @@ import { MisCalificaciones, Kardex } from './paginas/Alumno.jsx'
 import Constancias from './paginas/Constancias.jsx'
 import Reportes from './paginas/Reportes.jsx'
 import Verificar from './paginas/Verificar.jsx'
+import Telegram from './paginas/Telegram.jsx'
 
 // Página → [texto del menú, ícono, componente]
 const PAGINAS = {
@@ -26,11 +27,12 @@ const PAGINAS = {
   reportes: ['Reportes', 'bi-bar-chart', Reportes],
   horario: ['Horario', 'bi-clock', Horario],
   alertas: ['Alertas de rezago', 'bi-exclamation-triangle', Alertas],
+  telegram: ['Bot de Telegram', 'bi-telegram', Telegram],
 }
 const MENU = {
-  administrador: ['inicio', 'alumnos', 'reportes', 'lista', 'captura', 'horario', 'alertas'],
-  docente: ['inicio', 'lista', 'captura', 'reportes', 'horario', 'alertas'],
-  alumno: ['inicio', 'calificaciones', 'kardex', 'constancias', 'horario'],
+  administrador: ['inicio', 'alumnos', 'reportes', 'lista', 'captura', 'horario', 'alertas', 'telegram'],
+  docente: ['inicio', 'lista', 'captura', 'reportes', 'horario', 'alertas', 'telegram'],
+  alumno: ['inicio', 'calificaciones', 'kardex', 'constancias', 'horario', 'telegram'],
 }
 
 const paginaDeLaUrl = () => location.hash.slice(1)

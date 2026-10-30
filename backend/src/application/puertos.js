@@ -5,7 +5,7 @@
  * @typedef {{ id: string, nombre: string, rol: 'administrador'|'docente'|'alumno', escuela_id: string, alumno_id?: string }} Usuario
  *
  * @typedef {object} Repositorio
- * @property {(ident: {email?: string, matricula?: string}) => Promise<object|undefined>} buscarUsuario
+ * @property {(ident: {email?: string, matricula?: string, chatId?: string}) => Promise<object|undefined>} buscarUsuario
  *   Usuario activo o no, con password_hash y, si es alumno, alumno_id y matricula.
  * @property {(u: Usuario) => Promise<{grupos: object[], alumnos: object[], materias: object[], horarios: object[]}>} catalogo
  *   Lo que ve cada rol en el periodo en curso.
@@ -28,6 +28,12 @@
  * @property {() => Promise<object[]>} alertasPendientes
  * @property {(id: string) => Promise<void>} marcarAlertaEnviada
  * @property {(u: Usuario) => Promise<object[]>} alertasDe
+ * @property {(usuarioId: string, codigo: string, expira: Date) => Promise<void>} guardarVinculacion
+ *   Guarda (o reemplaza) el código de 6 dígitos para vincular Telegram.
+ * @property {(codigo: string, ahora: Date) => Promise<string|undefined>} consumirVinculacion
+ *   Borra el código si sigue vigente y devuelve de quién era.
+ * @property {(usuarioId: string, chatId: string) => Promise<void>} asignarChat
+ *   Le pone ese chat al usuario y se lo quita a quien lo tuviera.
  *
  * @typedef {{ enviar: (chatId: string, texto: string) => Promise<boolean> }} Notificador
  * @typedef {{ constancia: (datos: object) => Promise<Buffer> }} GeneradorPdf

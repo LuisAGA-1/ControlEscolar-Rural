@@ -4,6 +4,16 @@ import { validarRegistros, validarClase, normalizarIdentificador, ErrorValidacio
 import { exigirRol, alumnoConsultado, ErrorPermiso } from '../domain/permisos.js';
 import { resumirKardex } from '../domain/kardex.js';
 import { TIPOS_CONSTANCIA, validarTipoConstancia, crearFolio } from '../domain/constancias.js';
+import { crearCodigoVinculacion } from '../domain/asistente.js';
+
+const VIGENCIA_CODIGO_MIN = 10;
+
+// Lo que viaja en el token y lo que el bot usa como "sesión" del chat.
+function sesionDe(u) {
+  const usuario = { id: u.id, nombre: u.nombre, rol: u.rol, escuela_id: u.escuela_id };
+  if (u.rol === 'alumno') Object.assign(usuario, { alumno_id: u.alumno_id, matricula: u.matricula });
+  return usuario;
+}
 
 /**
  * @param {{ repo: import('./puertos.js').Repositorio, notificador: import('./puertos.js').Notificador,
@@ -24,8 +34,7 @@ export function crearCasosDeUso({ repo, notificador, tokens, pdf, azar, reloj = 
       if (!u || !u.activo || !(await tokens.verificarPassword(String(password ?? ''), u.password_hash))) {
         throw new ErrorValidacion('Usuario o contraseña incorrectos');
       }
-      const usuario = { id: u.id, nombre: u.nombre, rol: u.rol, escuela_id: u.escuela_id };
-      if (u.rol === 'alumno') Object.assign(usuario, { alumno_id: u.alumno_id, matricula: u.matricula });
+      const usuario = sesionDe(u);
       return { token: tokens.firmar(usuario), usuario };
     },
 
@@ -108,6 +117,34 @@ export function crearCasosDeUso({ repo, notificador, tokens, pdf, azar, reloj = 
     alertas(usuario) {
       exigirRol(usuario, 'administrador', 'docente');
       return repo.alertasDe(usuario);
+    },
+
+    // Administración busca a un alumno por matrícula (el bot no maneja ids).
+    async alumnoPorMatricula(usuario, matricula) {
+      exigirRol(usuario, 'administrador');
+      const u = await repo.buscarUsuario({ matricula: String(matricula ?? '').toUpperCase() });
+      if (!u?.alumno_id) throw new ErrorValidacion(`No hay un alumno con la matrícula ${matricula ?? ''}`);
+      return { alumno_id: u.alumno_id, nombre: u.nombre, matricula: u.matricula };
+    },
+
+    // Telegram: el usuario pide un código en el portal y se lo manda al bot con /vincular.
+    async codigoTelegram(usuario) {
+      const codigo = crearCodigoVinculacion(azar());
+      const expira = new Date(reloj().getTime() + VIGENCIA_CODIGO_MIN * 60_000);
+      await repo.guardarVinculacion(usuario.id, codigo, expira);
+      return { codigo, expira, minutos: VIGENCIA_CODIGO_MIN };
+    },
+
+    async vincularTelegram(chatId, codigo) {
+      const usuarioId = await repo.consumirVinculacion(String(codigo ?? ''), reloj());
+      if (!usuarioId) throw new ErrorValidacion('El código no existe o ya venció. Genera otro en el portal.');
+      await repo.asignarChat(usuarioId, String(chatId));
+      return this.usuarioDeTelegram(chatId);
+    },
+
+    async usuarioDeTelegram(chatId) {
+      const u = chatId == null ? undefined : await repo.buscarUsuario({ chatId: String(chatId) });
+      return u?.activo ? sesionDe(u) : null;
     },
   };
 }
