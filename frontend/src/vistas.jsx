@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { local, registrar, hoy } from './api.js'
 
 const ESTADOS = [['presente', 'P'], ['falta', 'F'], ['retardo', 'R'], ['justificada', 'J']]
-const nombreGrupo = (g) => `${g.grado}°${g.letra} (${g.ciclo})`
+const nombreGrupo = (g) => `${g.semestre}°${g.letra} ${g.carrera} (${g.periodo})`
 
 function useGrupo() {
   const { grupos, alumnos } = local.catalogo()
@@ -15,27 +15,45 @@ function useGrupo() {
       </select>
     </label>
   )
-  return [alumnos.filter((a) => a.grupo_id === grupoId), selector, grupos.length]
+  return [alumnos.filter((a) => a.grupo_id === grupoId), selector, grupos.length, grupoId]
+}
+
+function useMateria(grupoId) {
+  const materias = local.catalogo().materias.filter((m) => m.grupo_id === grupoId)
+  const [elegida, setMateriaId] = useState('')
+  const materiaId = materias.some((m) => m.id === elegida) ? elegida : materias[0]?.id || ''
+  const selector = (
+    <label>Materia{' '}
+      <select value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
+        {materias.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+      </select>
+    </label>
+  )
+  return [materiaId, selector]
 }
 
 export function PasarLista({ onCambio }) {
-  const [alumnos, selector, hayGrupos] = useGrupo()
+  const [alumnos, selector, hayGrupos, grupoId] = useGrupo()
+  const [materiaId, selectorMateria] = useMateria(grupoId)
   const [fecha, setFecha] = useState(hoy)
   const asis = local.registros().asis
-  const marcar = (alumno_id, estado) => registrar('asis', `${alumno_id}|${fecha}`, { alumno_id, fecha, estado }).then(() => onCambio(), (e) => onCambio(e.message))
+  const clave = (alumno_id) => `${alumno_id}|${materiaId}|${fecha}`
+  const marcar = (alumno_id, estado) =>
+    registrar('asis', clave(alumno_id), { alumno_id, materia_id: materiaId, fecha, estado }).then(() => onCambio(), (e) => onCambio(e.message))
   if (!hayGrupos) return <p>No tienes grupos asignados todavía.</p>
   return (
     <section>
       <div className="filtros">
         {selector}
+        {selectorMateria}
         <label>Fecha <input type="date" value={fecha} max={hoy()} onChange={(e) => setFecha(e.target.value)} /></label>
-        <button onClick={() => alumnos.forEach((a) => !asis[`${a.id}|${fecha}`] && marcar(a.id, 'presente'))}>Marcar faltantes como presentes</button>
+        <button onClick={() => alumnos.forEach((a) => !asis[clave(a.id)] && marcar(a.id, 'presente'))}>Marcar faltantes como presentes</button>
       </div>
       <table>
         <thead><tr><th>Alumno</th><th>Asistencia</th></tr></thead>
         <tbody>
           {alumnos.map((a) => {
-            const actual = asis[`${a.id}|${fecha}`]?.estado
+            const actual = asis[clave(a.id)]?.estado
             return (
               <tr key={a.id}>
                 <td>{a.nombre}</td>
@@ -55,10 +73,8 @@ export function PasarLista({ onCambio }) {
 }
 
 export function Calificaciones({ onCambio }) {
-  const [alumnos, selector, hayGrupos] = useGrupo()
-  const { materias } = local.catalogo()
-  const [elegida, setMateriaId] = useState('')
-  const materiaId = elegida || materias[0]?.id || ''
+  const [alumnos, selector, hayGrupos, grupoId] = useGrupo()
+  const [materiaId, selectorMateria] = useMateria(grupoId)
   const [parcial, setParcial] = useState(1)
   const cal = local.registros().cal
   if (!hayGrupos) return <p>No tienes grupos asignados todavía.</p>
@@ -72,11 +88,7 @@ export function Calificaciones({ onCambio }) {
     <section>
       <div className="filtros">
         {selector}
-        <label>Materia{' '}
-          <select value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
-            {materias.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-          </select>
-        </label>
+        {selectorMateria}
         <label>Parcial{' '}
           <select value={parcial} onChange={(e) => setParcial(Number(e.target.value))}>
             {[1, 2, 3].map((p) => <option key={p}>{p}</option>)}
