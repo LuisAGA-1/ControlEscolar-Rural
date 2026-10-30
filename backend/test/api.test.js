@@ -8,6 +8,7 @@ import { crearPool, crearRepositorioPg } from '../src/infrastructure/persistence
 import { crearCasosDeUso } from '../src/application/casosDeUso.js';
 import { crearApp } from '../src/infrastructure/http/app.js';
 import { crearGeneradorPdf } from '../src/infrastructure/pdf/constanciaPdf.js';
+import { crearAsistente } from '../src/infrastructure/bot/asistente.js';
 import { randomBytes } from 'node:crypto';
 
 test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASSWORD' }, async (t) => {
@@ -19,13 +20,19 @@ test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASS
     pdf: crearGeneradorPdf(),
     azar: () => randomBytes(8).toString('hex'),
   });
-  const srv = crearApp({ casos, secreto: 'x', ping: async () => ({ ok: true }) }).listen(0);
-  t.after(() => (srv.close(), pool.end()));
+  const asistente = crearAsistente({ casos });
+  const srv = crearApp({ casos, secreto: 'x', ping: async () => ({ ok: true }), asistente, tokenBot: 'bot' }).listen(0);
+  const chat = `prueba-${randomBytes(4).toString('hex')}`;
+  t.after(async () => {
+    await pool.query('UPDATE usuarios SET telegram_chat_id = NULL WHERE telegram_chat_id = $1', [chat]);
+    srv.close();
+    await pool.end();
+  });
   const url = `http://localhost:${srv.address().port}/api`;
-  const api = async (ruta, cuerpo, token) => {
+  const api = async (ruta, cuerpo, token, extra = {}) => {
     const r = await fetch(url + ruta, {
       method: cuerpo ? 'POST' : 'GET',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extra },
       body: cuerpo && JSON.stringify(cuerpo),
     });
     return { status: r.status, body: await r.json() };
@@ -101,4 +108,23 @@ test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASS
   assert.equal((await api('/alertas', null, alumno.token)).status, 403);
   assert.ok(Array.isArray((await api('/alertas', null, admin.token)).body));
   assert.equal((await api('/alertas', null, 'token-falso')).status, 401);
+
+  // Bot: el alumno pide un código en el portal, lo manda por Telegram y luego pregunta con sus palabras.
+  const bot = (ruta, cuerpo) => api(`/bot/${ruta}`, cuerpo, null, { 'X-Bot-Token': 'bot' });
+  assert.equal((await api('/bot/contexto', { chat_id: chat, texto: 'hola' })).status, 401, 'sin el token de n8n');
+  assert.equal((await bot('contexto', { chat_id: chat, texto: 'hola' })).body.listo, true, 'chat sin vincular');
+  const { codigo } = (await api('/telegram/codigo', {}, alumno.token)).body;
+  assert.match(codigo, /^\d{6}$/);
+  assert.match((await bot('contexto', { chat_id: chat, texto: `/vincular ${codigo}` })).body.texto, /vinculada/);
+  assert.match((await bot('contexto', { chat_id: chat, texto: `/vincular ${codigo}` })).body.texto, /no existe|venció/, 'el código es de un solo uso');
+  const ctx = (await bot('contexto', { chat_id: chat, texto: '¿cómo voy?' })).body;
+  assert.equal(ctx.listo, false);
+  assert.match(ctx.instrucciones, /kardex/);
+  const cal = (await bot('responder', { chat_id: chat, texto: '¿cómo voy?', ia: '{"intencion":"calificaciones"}' })).body;
+  assert.match(cal.texto, /P3: 7\.5/);
+  const pdf = (await bot('responder', { chat_id: chat, texto: 'constancia', ia: 'claro: {"intencion":"constancia","parametros":{"tipo":"estudios"}}' })).body;
+  assert.ok(Buffer.from(pdf.archivo.base64, 'base64').subarray(0, 4).toString() === '%PDF');
+  const ajena = (await bot('responder', { chat_id: chat, texto: 'reporte', ia: '{"intencion":"reporte"}' })).body;
+  assert.equal(ajena.intencion, 'ayuda', 'un alumno no puede pedir reportes aunque la IA lo elija');
+  assert.match((await bot('responder', { chat_id: chat, texto: 'x', ia: 'no es json' })).body.texto, /Puedes escribirme/);
 });

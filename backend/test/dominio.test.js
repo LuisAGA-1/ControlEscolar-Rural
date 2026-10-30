@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { validarCalificacion, normalizarIdentificador } from '../src/domain/registros.js';
 import { resumirKardex } from '../src/domain/kardex.js';
 import { exigirRol, alumnoConsultado, ErrorPermiso } from '../src/domain/permisos.js';
+import { interpretarIntencion, leerCodigoVinculacion, crearCodigoVinculacion, intencionesDe } from '../src/domain/asistente.js';
 
 const UNO = '00000000-0000-4000-8000-000000000001';
 
@@ -39,4 +40,19 @@ test('folio y código de la constancia salen del texto aleatorio', async () => {
   const { crearFolio, validarTipoConstancia } = await import('../src/domain/constancias.js');
   assert.deepEqual(crearFolio(new Date(2026, 9, 30), 'a1b2c3d4e5f6a7b8'), { folio: 'FCA-2026-A1B2C3D4', codigo: 'E5F6A7B8' });
   assert.throws(() => validarTipoConstancia('titulo'));
+});
+
+test('el bot entiende la respuesta de la IA y solo con intenciones del rol', () => {
+  assert.deepEqual(interpretarIntencion('alumno', '```json\n{"intencion":"Horario","parametros":{"dia":"Miércoles"}}\n```'), {
+    intencion: 'horario', parametros: { tipo: 'estudios', dia: 'miercoles' },
+  });
+  assert.equal(interpretarIntencion('alumno', '{"intencion":"reporte"}').intencion, 'ayuda');
+  assert.equal(interpretarIntencion('docente', 'basura').intencion, 'ayuda');
+  const admin = interpretarIntencion('administrador', '{"intencion":"constancia","parametros":{}}', 'constancia con calificaciones de a260015');
+  assert.deepEqual(admin.parametros, { tipo: 'calificaciones', matricula: 'A260015' });
+  assert.equal(leerCodigoVinculacion('/vincular 012345'), '012345');
+  assert.equal(leerCodigoVinculacion('/start@MiBot 012345'), '012345');
+  assert.equal(leerCodigoVinculacion('/vincular 12345'), null);
+  assert.equal(crearCodigoVinculacion('00000001ffffffff'), '000001');
+  assert.ok(intencionesDe('alumno').every((i) => i.nombre !== 'alertas'));
 });

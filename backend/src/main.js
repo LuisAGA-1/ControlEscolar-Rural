@@ -8,6 +8,7 @@ import { crearNotificadorTelegram } from './infrastructure/notifications/telegra
 import { crearGeneradorPdf } from './infrastructure/pdf/constanciaPdf.js';
 import { crearCasosDeUso } from './application/casosDeUso.js';
 import { crearApp } from './infrastructure/http/app.js';
+import { crearAsistente } from './infrastructure/bot/asistente.js';
 
 const secreto = process.env.JWT_SECRET;
 if (!secreto) throw new Error('Falta JWT_SECRET en .env');
@@ -29,7 +30,9 @@ const ping = async () => {
 };
 
 const puerto = Number(process.env.PORT || 3000);
-crearApp({ casos, secreto, ping }).listen(puerto, () => {
+const tokenBot = process.env.BOT_API_TOKEN;
+if (!tokenBot) console.warn('Sin BOT_API_TOKEN en .env: las rutas /api/bot (n8n) quedan cerradas');
+crearApp({ casos, secreto, ping, asistente: crearAsistente({ casos }), tokenBot }).listen(puerto, () => {
   console.log(`PostgreSQL: ${pool.options.database} en ${pool.options.host}:${pool.options.port}`);
   console.log(`API escuchando en http://localhost:${puerto}/api`);
 });
