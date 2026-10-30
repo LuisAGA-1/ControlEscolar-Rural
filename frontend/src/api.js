@@ -27,13 +27,14 @@ async function api(ruta, opciones = {}) {
   return cuerpo
 }
 
-export async function iniciarSesion(email, password) {
-  const sesion = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+export async function iniciarSesion(usuario, password) {
+  const sesion = await api('/auth/login', { method: 'POST', body: JSON.stringify({ usuario, password }) })
   localStorage.setItem('sesion', JSON.stringify(sesion))
 }
 
 export async function cargar() {
-  const [catalogo, alertas] = await Promise.all([api('/catalogo'), api('/alertas')])
+  const rol = local.sesion()?.usuario.rol
+  const [catalogo, alertas] = await Promise.all([api('/catalogo'), rol === 'alumno' ? [] : api('/alertas')])
   datos = { ...datos, catalogo, alertas }
 }
 

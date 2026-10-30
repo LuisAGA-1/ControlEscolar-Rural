@@ -2,6 +2,7 @@
 const ESTADOS = ['presente', 'falta', 'retardo', 'justificada'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const MATRICULA = /^[A-Z]\d{6}$/;
 
 export class ErrorValidacion extends Error {}
 
@@ -10,10 +11,10 @@ function exigir(cond, msg) {
 }
 
 export function validarAsistencia(a) {
-  exigir(UUID.test(a?.alumno_id ?? ''), 'asistencia: alumno_id inválido');
+  exigir(UUID.test(a?.alumno_id ?? '') && UUID.test(a.materia_id ?? ''), 'asistencia: alumno_id o materia_id inválido');
   exigir(FECHA.test(a.fecha ?? ''), 'asistencia: fecha debe ser AAAA-MM-DD');
   exigir(ESTADOS.includes(a.estado), `asistencia: estado debe ser ${ESTADOS.join(', ')}`);
-  return { alumno_id: a.alumno_id, fecha: a.fecha, estado: a.estado, observacion: a.observacion?.slice(0, 200) || null };
+  return { alumno_id: a.alumno_id, materia_id: a.materia_id, fecha: a.fecha, estado: a.estado, observacion: a.observacion?.slice(0, 200) || null };
 }
 
 export function validarCalificacion(c) {
@@ -29,4 +30,10 @@ export function validarRegistros(r) {
     asistencias: (r?.asistencias ?? []).map(validarAsistencia),
     calificaciones: (r?.calificaciones ?? []).map(validarCalificacion),
   };
+}
+
+// Los alumnos entran con su matrícula (A260001); los demás, con su correo.
+export function normalizarIdentificador(texto) {
+  const t = String(texto ?? '').trim();
+  return MATRICULA.test(t.toUpperCase()) ? { matricula: t.toUpperCase() } : { email: t.toLowerCase() };
 }
