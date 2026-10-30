@@ -56,6 +56,13 @@ test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASS
   assert.equal((await api('/registros', registro(caso.materia_id), alumno.token)).status, 403);
   assert.equal((await api('/registros', { asistencias: [{ ...registro(caso.materia_id).asistencias[0], fecha: 'ayer' }] }, maria.token)).status, 400);
 
+  const { rows: [g] } = await pool.query('SELECT grupo_id FROM alumnos WHERE id = $1', [caso.alumno_id]);
+  const clase = (materia_id) => `/registros?grupo_id=${g.grupo_id}&materia_id=${materia_id}&fecha=2026-10-12&parcial=3`;
+  const guardado = (await api(clase(caso.materia_id), null, maria.token)).body;
+  assert.ok(guardado.asistencias.some((a) => a.alumno_id === caso.alumno_id && a.estado === 'falta'));
+  assert.ok(guardado.calificaciones.some((c) => c.alumno_id === caso.alumno_id && Number(c.calificacion) === 7.5));
+  assert.equal((await api(clase(caso.ajena), null, maria.token)).status, 403);
+
   const propias = (await api(`/calificaciones?alumno_id=00000000-0000-4000-8000-000000000000`, null, alumno.token)).body;
   assert.ok(propias.some((c) => c.parcial === 3 && Number(c.calificacion) === 7.5), 'el alumno ve sus calificaciones, no las del id pedido');
   const deMaria = (await api(`/calificaciones?alumno_id=${caso.alumno_id}`, null, maria.token)).body;

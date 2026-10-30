@@ -1,67 +1,93 @@
 import { useEffect, useState } from 'react'
-import { local, iniciarSesion, cargar } from './api.js'
-import { PasarLista, Calificaciones, Horario, Alertas } from './vistas.jsx'
+import { sesion, useApi } from './api.js'
+import { iniciales, ROL } from './formato.js'
+import { Cargando } from './componentes.jsx'
+import Login from './paginas/Login.jsx'
+import Inicio from './paginas/Inicio.jsx'
+import PaseLista from './paginas/PaseLista.jsx'
+import Captura from './paginas/Captura.jsx'
+import Horario from './paginas/Horario.jsx'
+import Alertas from './paginas/Alertas.jsx'
+import Alumnos from './paginas/Alumnos.jsx'
+import { MisCalificaciones, Kardex } from './paginas/Alumno.jsx'
 
-const VISTAS = { lista: ['Asistencia', PasarLista], cal: ['Calificaciones', Calificaciones], horario: ['Horario', Horario], alertas: ['Alertas', Alertas] }
-const POR_ROL = { administrador: ['lista', 'cal', 'horario', 'alertas'], docente: ['lista', 'cal', 'horario', 'alertas'], alumno: ['horario'] } // shortcut: el portal del alumno llega en la Fase 2
-
-export default function App() {
-  const [sesion, setSesion] = useState(local.sesion)
-  const [elegida, setVista] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [, refrescar] = useState(0)
-
-  function salir() { local.cerrarSesion(); setSesion(null) }
-
-  // Tras cada guardado: muestra el error si lo hubo y vuelve a pintar.
-  function actualizar(error) {
-    setAviso(error ? 'No se guardó: ' + error : '')
-    refrescar((n) => n + 1)
-  }
-
-  useEffect(() => {
-    if (!sesion) return
-    cargar().then(() => actualizar(), (e) => (e.status === 401 ? salir() : setAviso('No se pudo cargar: ' + e.message)))
-  }, [sesion])
-
-  if (!sesion) return <Login onEntrar={() => setSesion(local.sesion())} />
-
-  const vistas = POR_ROL[sesion.usuario.rol] ?? []
-  const vista = vistas.includes(elegida) ? elegida : vistas[0]
-  const Vista = VISTAS[vista][1]
-  return (
-    <>
-      <header>
-        <strong>Control Escolar</strong>
-        <span className="usuario">{sesion.usuario.nombre} · <a href="#" onClick={salir}>Salir</a></span>
-      </header>
-      {aviso && <p className="aviso">{aviso}</p>}
-      <nav>
-        {vistas.map((k) => (
-          <button key={k} className={k === vista ? 'activa' : ''} onClick={() => setVista(k)}>{VISTAS[k][0]}</button>
-        ))}
-      </nav>
-      <main><Vista onCambio={actualizar} /></main>
-    </>
-  )
+// Página → [texto del menú, ícono, componente]
+const PAGINAS = {
+  inicio: ['Inicio', 'bi-grid-1x2', Inicio],
+  alumnos: ['Alumnos', 'bi-people', Alumnos],
+  lista: ['Pase de lista', 'bi-calendar-check', PaseLista],
+  captura: ['Calificaciones', 'bi-journal-text', Captura],
+  calificaciones: ['Mis calificaciones', 'bi-journal-text', MisCalificaciones],
+  kardex: ['Kárdex', 'bi-card-list', Kardex],
+  horario: ['Horario', 'bi-clock', Horario],
+  alertas: ['Alertas de rezago', 'bi-exclamation-triangle', Alertas],
+}
+const MENU = {
+  administrador: ['inicio', 'alumnos', 'lista', 'captura', 'horario', 'alertas'],
+  docente: ['inicio', 'lista', 'captura', 'horario', 'alertas'],
+  alumno: ['inicio', 'calificaciones', 'kardex', 'horario'],
 }
 
-function Login({ onEntrar }) {
-  const [usuario, setUsuario] = useState('maria.docente@escuela.mx')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  async function entrar(e) {
-    e.preventDefault()
-    setError('')
-    try { await iniciarSesion(usuario, password); onEntrar() } catch (err) { setError(err.message) }
-  }
+const paginaDeLaUrl = () => location.hash.slice(1)
+
+export default function App() {
+  const [actual, setActual] = useState(sesion.leer)
+  const [hash, setHash] = useState(paginaDeLaUrl)
+  const [menuAbierto, setMenuAbierto] = useState(false)
+
+  function salir() { sesion.borrar(); setActual(null) }
+
+  useEffect(() => {
+    const cambio = () => { setHash(paginaDeLaUrl()); setMenuAbierto(false) }
+    addEventListener('hashchange', cambio)
+    addEventListener('sesion-vencida', salir)
+    return () => { removeEventListener('hashchange', cambio); removeEventListener('sesion-vencida', salir) }
+  }, [])
+
+  if (!actual) return <Login onEntrar={() => setActual(sesion.leer())} />
+  return <Portal usuario={actual.usuario} hash={hash} menuAbierto={menuAbierto} setMenuAbierto={setMenuAbierto} salir={salir} />
+}
+
+function Portal({ usuario, hash, menuAbierto, setMenuAbierto, salir }) {
+  const menu = MENU[usuario.rol] ?? []
+  const pagina = menu.includes(hash) ? hash : 'inicio'
+  const [titulo, , Pagina] = PAGINAS[pagina]
+  const { datos: catalogo, error } = useApi('/catalogo')
+  const { datos: alertas } = useApi(usuario.rol === 'alumno' ? null : '/alertas')
+
   return (
-    <form className="login" onSubmit={entrar}>
-      <h1>Control Escolar</h1>
-      <label>Correo o matrícula <input value={usuario} onChange={(e) => setUsuario(e.target.value)} autoComplete="username" required /></label>
-      <label>Contraseña <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
-      <button>Entrar</button>
-      {error && <p className="error">{error}</p>}
-    </form>
+    <div className="app">
+      <aside className={`sidebar${menuAbierto ? ' abierto' : ''}`}>
+        <a className="marca" href="#inicio">
+          <span className="escudo"><i className="bi bi-mortarboard-fill" /></span>
+          <span><strong>Control Escolar</strong><small>Facultad de Contaduría y Administración</small></span>
+        </a>
+        <nav>
+          <span className="seccion">Menú principal</span>
+          {menu.map((p) => (
+            <a key={p} href={`#${p}`} className={p === pagina ? 'activo' : ''} aria-current={p === pagina ? 'page' : undefined}>
+              <i className={`bi ${PAGINAS[p][1]}`} /> {PAGINAS[p][0]}
+            </a>
+          ))}
+        </nav>
+        <div className="pie-sidebar">Periodo {catalogo?.grupos[0]?.periodo ?? ''}</div>
+      </aside>
+      {menuAbierto && <div className="velo" onClick={() => setMenuAbierto(false)} />}
+
+      <div className="contenido">
+        <header className="topbar">
+          <button className="boton-icono menu-btn" aria-label="Abrir menú" onClick={() => setMenuAbierto(!menuAbierto)}><i className="bi bi-list" /></button>
+          <div className="migas"><span className="text-muted">Control Escolar</span> <i className="bi bi-chevron-right" /> <strong>{titulo}</strong></div>
+          <div className="usuario">
+            <span className="avatar">{iniciales(usuario.nombre)}</span>
+            <span className="solo-ancho"><strong>{usuario.nombre}</strong><small>{ROL[usuario.rol]}</small></span>
+            <button className="boton-icono" onClick={salir} aria-label="Cerrar sesión" title="Cerrar sesión"><i className="bi bi-box-arrow-right" /></button>
+          </div>
+        </header>
+        <main className="pagina">
+          {catalogo ? <Pagina usuario={usuario} catalogo={catalogo} alertas={alertas ?? []} /> : <Cargando error={error} />}
+        </main>
+      </div>
+    </div>
   )
 }
