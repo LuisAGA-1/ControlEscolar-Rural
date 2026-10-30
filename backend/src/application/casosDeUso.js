@@ -2,11 +2,11 @@
 // por parámetro, así no dependen de PostgreSQL, Telegram ni JWT directamente.
 //
 // Puertos de salida que se esperan:
-//   repo:        buscarUsuarioPorEmail, catalogoDeDocente, guardarLote, generarAlertas,
+//   repo:        buscarUsuarioPorEmail, catalogoDeDocente, guardarRegistros, generarAlertas,
 //                alertasPendientes, marcarAlertaEnviada, alertasDeDocente
 //   notificador: enviar(chatId, texto)
 //   tokens:      firmar(payload), verificarPassword(plano, hash)
-import { validarLote, ErrorValidacion } from '../domain/registros.js';
+import { validarRegistros, ErrorValidacion } from '../domain/registros.js';
 
 export function crearCasosDeUso({ repo, notificador, tokens }) {
   async function notificarAlertas() {
@@ -28,14 +28,11 @@ export function crearCasosDeUso({ repo, notificador, tokens }) {
 
     catalogo: (usuario) => repo.catalogoDeDocente(usuario),
 
-    async sincronizarLote(usuario, cuerpo) {
-      const lote = validarLote(cuerpo);
-      const r = await repo.guardarLote(usuario.id, lote);
-      if (!r.duplicado) {
-        r.alertas_nuevas = await repo.generarAlertas();
-        // Si Telegram falla no se pierde nada: la alerta queda con enviada=false y se reintenta.
-        await notificarAlertas().catch((e) => console.error('Telegram:', e.message));
-      }
+    async guardarRegistros(usuario, cuerpo) {
+      const r = await repo.guardarRegistros(usuario.id, validarRegistros(cuerpo));
+      r.alertas_nuevas = await repo.generarAlertas();
+      // Si Telegram falla no se pierde nada: la alerta queda con enviada=false y se reintenta.
+      await notificarAlertas().catch((e) => console.error('Telegram:', e.message));
       return r;
     },
 

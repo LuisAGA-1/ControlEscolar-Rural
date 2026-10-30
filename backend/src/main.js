@@ -15,7 +15,7 @@ const casos = crearCasosDeUso({
   repo: crearRepositorioPg(pool),
   notificador: crearNotificadorTelegram(),
   tokens: {
-    firmar: (u) => jwt.sign(u, secreto, { expiresIn: '30d' }), // largo: el docente puede pasar días sin señal
+    firmar: (u) => jwt.sign(u, secreto, { expiresIn: '8h' }),
     verificarPassword: (plano, hash) => bcrypt.compare(plano, hash),
   },
 });
