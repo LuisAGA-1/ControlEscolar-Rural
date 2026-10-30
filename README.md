@@ -4,15 +4,23 @@ Portal escolar para **administradores, docentes y alumnos** (calificaciones, con
 **bot de Telegram** que hace lo mismo mediante un flujo de n8n con Ollama. React + Node.js sobre Ubuntu, con
 arquitectura hexagonal en el backend.
 
-> En migración. Listas: Fase 0 (estructura nueva, sin modo offline) y Fase 1 (modelo universitario, tres roles con
-> permisos, login con matrícula, kárdex). Siguen el portal por rol, constancias y reportes, y el bot con n8n + Ollama.
+> En migración. Listas: Fase 0 (estructura nueva, sin modo offline), Fase 1 (modelo universitario, tres roles con
+> permisos, login con matrícula, kárdex) y Fase 2 (portal por rol con diseño de vidrio). Siguen constancias y reportes,
+> y el bot con n8n + Ollama.
 
 | Carpeta | Qué es |
 |---|---|
 | `backend/` | API Node.js + Express, arquitectura hexagonal (`domain/`, `application/`, `infrastructure/`) |
-| `frontend/` | Portal web en React + Vite |
+| `frontend/` | Portal web en React + Vite: `src/paginas/` una por pantalla, `src/api.js` única capa que habla con el backend |
 | `database/` | PostgreSQL: `001_schema.sql` (modelo universitario) y `002_datos_prueba.sql` (facultad de ejemplo) |
 | `legado-aspnet/` | Versión anterior en ASP.NET Core Razor Pages, ya no se desarrolla (se toma su diseño y consultas) |
+
+## Portal por rol
+| Rol | Pantallas |
+|---|---|
+| Administrador | Inicio con indicadores de la facultad, Alumnos (busca y abre calificaciones y kárdex), Pase de lista, Calificaciones, Horario por grupo, Alertas |
+| Docente | Inicio con sus grupos y clases de hoy, Pase de lista y Calificaciones de las materias que imparte, Horario, Alertas |
+| Alumno | Inicio con promedio y créditos, Mis calificaciones, Kárdex, Horario |
 
 ## Arquitectura hexagonal (backend/src)
 | Capa | Archivo | Qué hace |
@@ -66,6 +74,7 @@ La prueba con base escribe una falta (12/10/2026) y un 3er parcial de ejemplo en
 | GET | `/api/health` | Prueba de conexión a la base |
 | POST | `/api/auth/login` | `{usuario, password}` (correo o matrícula) → token JWT de 8 horas |
 | GET | `/api/catalogo` | Grupos, alumnos, materias y horario que le tocan a cada rol en el periodo en curso |
+| GET | `/api/registros?grupo_id=&materia_id=&fecha=&parcial=` | Lista de esa fecha y calificaciones de ese parcial ya capturadas en una clase |
 | POST | `/api/registros` | `{asistencias[], calificaciones[]}`; administrador, o docente en sus materias |
 | GET | `/api/calificaciones?alumno_id=` | Parciales del periodo (el alumno ve solo los suyos; el docente, sus materias) |
 | GET | `/api/kardex?alumno_id=` | Kárdex con créditos y promedio (administrador o el propio alumno) |

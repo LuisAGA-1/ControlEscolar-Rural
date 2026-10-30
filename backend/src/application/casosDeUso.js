@@ -1,6 +1,6 @@
 // Aplicación: casos de uso. Reciben los puertos de salida (ver puertos.js) por parámetro,
 // así no dependen de PostgreSQL, Telegram ni JWT. La web y el bot llaman a los mismos casos.
-import { validarRegistros, normalizarIdentificador, ErrorValidacion } from '../domain/registros.js';
+import { validarRegistros, validarClase, normalizarIdentificador, ErrorValidacion } from '../domain/registros.js';
 import { exigirRol, alumnoConsultado, ErrorPermiso } from '../domain/permisos.js';
 import { resumirKardex } from '../domain/kardex.js';
 
@@ -42,6 +42,16 @@ export function crearCasosDeUso({ repo, notificador, tokens }) {
       // Si Telegram falla no se pierde nada: la alerta queda con enviada=false y se reintenta.
       await notificarAlertas().catch((e) => console.error('Telegram:', e.message));
       return r;
+    },
+
+    // Lo capturado de una clase (lista de una fecha y calificaciones de un parcial), para editarlo.
+    async registrosDeClase(usuario, consulta) {
+      exigirRol(usuario, 'administrador', 'docente');
+      const clase = validarClase(consulta);
+      if (usuario.rol === 'docente' && !(await repo.imparte(usuario.id, clase.grupoId, clase.materiaId))) {
+        throw new ErrorPermiso('Solo puedes ver las materias y grupos que impartes');
+      }
+      return repo.registrosDeClase(clase);
     },
 
     // Parciales del periodo en curso. El docente solo ve las materias que imparte a ese alumno.

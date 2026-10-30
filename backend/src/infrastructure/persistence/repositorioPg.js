@@ -120,6 +120,32 @@ export function crearRepositorioPg(pool) {
       }
     },
 
+    async imparte(docenteId, grupoId, materiaId) {
+      const rows = await filas(
+        `SELECT 1 FROM horarios h JOIN grupos g ON g.id = h.grupo_id JOIN periodos p ON p.id = g.periodo_id AND p.activo
+          WHERE h.docente_id = $1 AND h.grupo_id = $2 AND h.materia_id = $3 LIMIT 1`,
+        [docenteId, grupoId, materiaId]
+      );
+      return rows.length > 0;
+    },
+
+    async registrosDeClase({ grupoId, materiaId, fecha, parcial }) {
+      const [asistencias, calificaciones] = await Promise.all([
+        filas(
+          `SELECT s.alumno_id, s.estado FROM asistencias s JOIN alumnos a ON a.id = s.alumno_id
+            WHERE a.grupo_id = $1 AND s.materia_id = $2 AND s.fecha = $3`,
+          [grupoId, materiaId, fecha]
+        ),
+        filas(
+          `SELECT k.alumno_id, k.calificacion FROM calificaciones k
+             JOIN alumnos a ON a.id = k.alumno_id JOIN periodos p ON p.id = k.periodo_id AND p.activo
+            WHERE a.grupo_id = $1 AND k.materia_id = $2 AND k.parcial = $3`,
+          [grupoId, materiaId, parcial]
+        ),
+      ]);
+      return { asistencias, calificaciones };
+    },
+
     calificacionesDelPeriodo: (alumnoId, { docenteId }) =>
       filas(
         `SELECT m.id AS materia_id, m.clave, m.nombre AS materia, k.parcial, k.calificacion

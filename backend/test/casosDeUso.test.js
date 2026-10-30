@@ -16,6 +16,8 @@ function crear() {
   const repo = {
     buscarUsuario: async ({ matricula }) =>
       matricula === 'A260001' ? { id: 'u9', nombre: 'Ana', rol: 'alumno', activo: true, password_hash: 'ok', alumno_id: ALUMNO, matricula } : undefined,
+    imparte: async (_, grupo, materia) => grupo === 'g1' && materia === MATE,
+    registrosDeClase: async () => ({ asistencias: [], calificaciones: [] }),
     paresQueImparte: async (_, pares) => pares.filter((p) => p.materia_id === MATE).map((p) => `${p.alumno_id}|${p.materia_id}`),
     guardarRegistros: async (_, r) => (guardados.push(r), { calificaciones: r.calificaciones.length }),
     calificacionesDelPeriodo: async (id, filtro) => (consultas.push({ id, filtro }), []),
@@ -60,4 +62,13 @@ test('el docente ve solo sus materias y no ve el kárdex', async () => {
   await casos.calificaciones(docente, ALUMNO);
   assert.deepEqual(consultas[0], { id: ALUMNO, filtro: { docenteId: 'd1' } });
   await assert.rejects(casos.kardex(docente, ALUMNO), ErrorPermiso);
+});
+
+test('el docente solo abre la lista de las clases que imparte', async () => {
+  const { casos } = crear();
+  const G1 = '00000000-0000-4000-8000-0000000000c1';
+  const clase = (grupo_id, materia_id) => ({ grupo_id, materia_id, fecha: '2026-10-12', parcial: '1' });
+  await assert.rejects(casos.registrosDeClase(docente, clase(G1, OTRA)), ErrorPermiso);
+  await assert.rejects(casos.registrosDeClase(alumno, clase(G1, MATE)), ErrorPermiso);
+  await assert.rejects(casos.registrosDeClase(docente, { grupo_id: G1 }), /materia_id/);
 });

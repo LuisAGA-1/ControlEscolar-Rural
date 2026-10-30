@@ -34,6 +34,7 @@ export function crearApp({ casos, secreto, ping }) {
   app.post('/api/auth/login', ruta((req) => casos.iniciarSesion(req.body.usuario ?? req.body.email, req.body.password)));
   app.get('/api/catalogo', autenticado, ruta((req) => casos.catalogo(req.usuario)));
   app.post('/api/registros', autenticado, ruta((req) => casos.guardarRegistros(req.usuario, req.body)));
+  app.get('/api/registros', autenticado, ruta((req) => casos.registrosDeClase(req.usuario, req.query)));
   app.get('/api/calificaciones', autenticado, ruta((req) => casos.calificaciones(req.usuario, req.query.alumno_id)));
   app.get('/api/kardex', autenticado, ruta((req) => casos.kardex(req.usuario, req.query.alumno_id)));
   app.get('/api/alertas', autenticado, ruta((req) => casos.alertas(req.usuario)));
