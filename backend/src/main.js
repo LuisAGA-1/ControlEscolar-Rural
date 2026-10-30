@@ -2,8 +2,10 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'node:crypto';
 import { crearPool, crearRepositorioPg } from './infrastructure/persistence/repositorioPg.js';
 import { crearNotificadorTelegram } from './infrastructure/notifications/telegram.js';
+import { crearGeneradorPdf } from './infrastructure/pdf/constanciaPdf.js';
 import { crearCasosDeUso } from './application/casosDeUso.js';
 import { crearApp } from './infrastructure/http/app.js';
 
@@ -14,6 +16,8 @@ const pool = crearPool();
 const casos = crearCasosDeUso({
   repo: crearRepositorioPg(pool),
   notificador: crearNotificadorTelegram(),
+  pdf: crearGeneradorPdf(),
+  azar: () => randomBytes(8).toString('hex'),
   tokens: {
     firmar: (u) => jwt.sign(u, secreto, { expiresIn: '8h' }),
     verificarPassword: (plano, hash) => bcrypt.compare(plano, hash),

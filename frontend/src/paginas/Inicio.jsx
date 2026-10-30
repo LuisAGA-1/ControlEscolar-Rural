@@ -46,7 +46,7 @@ export default function Inicio({ usuario, catalogo, alertas }) {
           <div className="tarjeta">
             <div className="tarjeta-titulo"><h2>Trámites</h2></div>
             <a className="clase enlace" href="#kardex"><i className="bi bi-card-list" /><div><strong>Kárdex</strong><small>Materias cursadas, créditos y promedio</small></div></a>
-            <div className="clase"><i className="bi bi-file-earmark-text" /><div><strong>Constancias</strong><small>Próximamente: de estudios y de calificaciones en PDF</small></div></div>
+            <a className="clase enlace" href="#constancias"><i className="bi bi-file-earmark-text" /><div><strong>Constancias</strong><small>De estudios y de calificaciones, en PDF al momento</small></div></a>
           </div>
         ) : (
           <div className="tarjeta">

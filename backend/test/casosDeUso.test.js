@@ -13,6 +13,7 @@ const alumno = { id: 'u9', rol: 'alumno', alumno_id: ALUMNO };
 function crear() {
   const guardados = [];
   const consultas = [];
+  const constancias = [];
   const repo = {
     buscarUsuario: async ({ matricula }) =>
       matricula === 'A260001' ? { id: 'u9', nombre: 'Ana', rol: 'alumno', activo: true, password_hash: 'ok', alumno_id: ALUMNO, matricula } : undefined,
@@ -22,6 +23,8 @@ function crear() {
     guardarRegistros: async (_, r) => (guardados.push(r), { calificaciones: r.calificaciones.length }),
     calificacionesDelPeriodo: async (id, filtro) => (consultas.push({ id, filtro }), []),
     kardex: async () => [{ calificacion: 8, creditos: 6 }],
+    datosAlumno: async (id) => (id === ALUMNO ? { nombre: 'Ana' } : undefined),
+    guardarConstancia: async (c) => constancias.push(c),
     generarAlertas: async () => 0,
     alertasPendientes: async () => [],
   };
@@ -29,8 +32,10 @@ function crear() {
     repo,
     notificador: { enviar: async () => true },
     tokens: { firmar: (u) => JSON.stringify(u), verificarPassword: async (p, h) => p === 'bien' && h === 'ok' },
+    pdf: { constancia: async (d) => Buffer.from(d.folio) },
+    azar: () => '0123456789abcdef',
   });
-  return { casos, guardados, consultas };
+  return { casos, guardados, consultas, constancias };
 }
 
 const cal = (materia_id) => ({ calificaciones: [{ alumno_id: ALUMNO, materia_id, parcial: 1, calificacion: 8 }] });
@@ -71,4 +76,13 @@ test('el docente solo abre la lista de las clases que imparte', async () => {
   await assert.rejects(casos.registrosDeClase(docente, clase(G1, OTRA)), ErrorPermiso);
   await assert.rejects(casos.registrosDeClase(alumno, clase(G1, MATE)), ErrorPermiso);
   await assert.rejects(casos.registrosDeClase(docente, { grupo_id: G1 }), /materia_id/);
+});
+
+test('el alumno emite su propia constancia aunque pida la de otro; el docente no emite', async () => {
+  const { casos, constancias } = crear();
+  const c = await casos.emitirConstancia(alumno, { tipo: 'estudios', alumno_id: 'otro' });
+  assert.equal(c.archivo.toString(), c.folio);
+  assert.deepEqual(constancias[0], { folio: c.folio, codigo: '89ABCDEF', alumno_id: ALUMNO, tipo: 'estudios', emitida_por: 'u9' });
+  await assert.rejects(casos.emitirConstancia(docente, { tipo: 'estudios', alumno_id: ALUMNO }), ErrorPermiso);
+  await assert.rejects(casos.emitirConstancia(alumno, { tipo: 'titulo' }), /tipo de constancia/);
 });

@@ -5,8 +5,8 @@ Portal escolar para **administradores, docentes y alumnos** (calificaciones, con
 arquitectura hexagonal en el backend.
 
 > En migración. Listas: Fase 0 (estructura nueva, sin modo offline), Fase 1 (modelo universitario, tres roles con
-> permisos, login con matrícula, kárdex) y Fase 2 (portal por rol con diseño de vidrio). Siguen constancias y reportes,
-> y el bot con n8n + Ollama.
+> permisos, login con matrícula, kárdex), Fase 2 (portal por rol con diseño de vidrio) y Fase 3 (constancias en PDF
+> con folio verificable y reportes). Sigue el bot con n8n + Ollama.
 
 | Carpeta | Qué es |
 |---|---|
@@ -18,9 +18,10 @@ arquitectura hexagonal en el backend.
 ## Portal por rol
 | Rol | Pantallas |
 |---|---|
-| Administrador | Inicio con indicadores de la facultad, Alumnos (busca y abre calificaciones y kárdex), Pase de lista, Calificaciones, Horario por grupo, Alertas |
-| Docente | Inicio con sus grupos y clases de hoy, Pase de lista y Calificaciones de las materias que imparte, Horario, Alertas |
-| Alumno | Inicio con promedio y créditos, Mis calificaciones, Kárdex, Horario |
+| Administrador | Inicio con indicadores de la facultad, Alumnos (busca y abre calificaciones y kárdex), Reportes de la facultad y por grupo, emite constancias desde el alumno, Pase de lista, Calificaciones, Horario por grupo, Alertas |
+| Docente | Inicio con sus grupos y clases de hoy, Pase de lista y Calificaciones de las materias que imparte, Reportes de sus grupos, Horario, Alertas |
+| Alumno | Inicio con promedio y créditos, Mis calificaciones, Kárdex, Constancias (descarga en PDF), Horario |
+| Cualquiera, sin sesión | `#verificar`: comprueba una constancia con su folio y código |
 
 ## Arquitectura hexagonal (backend/src)
 | Capa | Archivo | Qué hace |
@@ -28,11 +29,13 @@ arquitectura hexagonal en el backend.
 | Dominio | `domain/registros.js` | Validaciones: asistencia, calificación 0–10, parcial 1–3, matrícula o correo |
 | Dominio | `domain/permisos.js` | Qué puede hacer cada rol (administrador, docente, alumno) |
 | Dominio | `domain/kardex.js` | Aprobada con 6, créditos y promedio del kárdex |
-| Puertos | `application/puertos.js` | Interfaces que piden los casos de uso: Repositorio, Notificador, Tokens |
-| Aplicación | `application/casosDeUso.js` | Iniciar sesión, catálogo, guardar registros, calificaciones, kárdex, alertas |
+| Dominio | `domain/constancias.js` | Tipos de constancia, folio y código de verificación |
+| Puertos | `application/puertos.js` | Interfaces que piden los casos de uso: Repositorio, Notificador, Tokens, GeneradorPdf |
+| Aplicación | `application/casosDeUso.js` | Iniciar sesión, catálogo, guardar registros, calificaciones, kárdex, constancias, reportes, alertas |
 | Adaptador de entrada | `infrastructure/http/app.js` | Rutas REST con JWT |
 | Adaptador de salida | `infrastructure/persistence/repositorioPg.js` | PostgreSQL |
 | Adaptador de salida | `infrastructure/notifications/telegram.js` | Bot de Telegram |
+| Adaptador de salida | `infrastructure/pdf/constanciaPdf.js` | Constancias en PDF (pdfkit) |
 | Arranque | `main.js` | Conecta todo (inyección de dependencias) |
 
 ## Correrlo en Ubuntu (WSL)
@@ -43,7 +46,7 @@ psql -d control_escolar -f database/001_schema.sql
 psql -d control_escolar -f database/002_datos_prueba.sql
 
 # 2) Backend (terminal 1)
-cd backend && cp .env.example .env && nano .env   # DB_PASSWORD, JWT_SECRET y TELEGRAM_BOT_TOKEN
+cd backend && cp .env.example .env && nano .env   # DB_PASSWORD, JWT_SECRET, TELEGRAM_BOT_TOKEN y URL_PUBLICA
 npm install && npm run dev
 
 # 3) Frontend (terminal 2)
@@ -66,7 +69,7 @@ Si tu PostgreSQL es el de Windows (pgAdmin), deja `DB_HOST=windows` en `.env`.
 cd backend && npm test                                  # dominio y casos de uso, sin base
 cd backend && DB_HOST=localhost DB_PASSWORD=... npm test  # además, la API contra PostgreSQL
 ```
-La prueba con base escribe una falta (12/10/2026) y un 3er parcial de ejemplo en la base que le indiques.
+La prueba con base escribe una falta (12/10/2026), un 3er parcial y constancias de ejemplo en la base que le indiques.
 
 ## API
 | Método | Ruta | Uso |
@@ -78,6 +81,10 @@ La prueba con base escribe una falta (12/10/2026) y un 3er parcial de ejemplo en
 | POST | `/api/registros` | `{asistencias[], calificaciones[]}`; administrador, o docente en sus materias |
 | GET | `/api/calificaciones?alumno_id=` | Parciales del periodo (el alumno ve solo los suyos; el docente, sus materias) |
 | GET | `/api/kardex?alumno_id=` | Kárdex con créditos y promedio (administrador o el propio alumno) |
+| POST | `/api/constancias` | `{tipo: estudios\|calificaciones, alumno_id}` → PDF (el alumno, solo la suya; o el administrador) |
+| GET | `/api/constancias/verificar?folio=&codigo=` | Pública: dice si la constancia es auténtica y de quién es |
+| GET | `/api/reportes/escuela` | Por grupo: alumnos, promedio, asistencia y alertas (administrador) |
+| GET | `/api/reportes/grupo/:id` | Por materia: promedio, reprobados y asistencia (administrador, o docente que imparte ahí) |
 | GET | `/api/alertas` | Alertas abiertas de sus grupos (administrador y docente) |
 
 Sin permiso, la API responde 403.

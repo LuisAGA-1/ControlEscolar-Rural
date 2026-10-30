@@ -26,6 +26,22 @@ export async function api(ruta, cuerpo) {
   return datos
 }
 
+// POST que responde un archivo (la constancia en PDF): lo descarga en el navegador.
+export async function descargar(ruta, cuerpo) {
+  const r = await fetch('/api' + ruta, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sesion.leer()?.token}` },
+    body: JSON.stringify(cuerpo),
+  })
+  if (r.status === 401) dispatchEvent(new Event('sesion-vencida'))
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Error ${r.status}`)
+  const nombre = /filename="?([^"]+)"?/.exec(r.headers.get('content-disposition') ?? '')?.[1] ?? 'constancia.pdf'
+  const enlace = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await r.blob()), download: nombre })
+  enlace.click()
+  URL.revokeObjectURL(enlace.href)
+  return nombre
+}
+
 export async function iniciarSesion(usuario, password) {
   sesion.guardar(await api('/auth/login', { usuario, password }))
 }

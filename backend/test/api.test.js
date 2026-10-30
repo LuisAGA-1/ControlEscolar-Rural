@@ -7,6 +7,8 @@ import jwt from 'jsonwebtoken';
 import { crearPool, crearRepositorioPg } from '../src/infrastructure/persistence/repositorioPg.js';
 import { crearCasosDeUso } from '../src/application/casosDeUso.js';
 import { crearApp } from '../src/infrastructure/http/app.js';
+import { crearGeneradorPdf } from '../src/infrastructure/pdf/constanciaPdf.js';
+import { randomBytes } from 'node:crypto';
 
 test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASSWORD' }, async (t) => {
   const pool = crearPool();
@@ -14,6 +16,8 @@ test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASS
     repo: crearRepositorioPg(pool),
     notificador: { enviar: async () => true },
     tokens: { firmar: (u) => jwt.sign(u, 'x'), verificarPassword: (p, h) => bcrypt.compare(p, h) },
+    pdf: crearGeneradorPdf(),
+    azar: () => randomBytes(8).toString('hex'),
   });
   const srv = crearApp({ casos, secreto: 'x', ping: async () => ({ ok: true }) }).listen(0);
   t.after(() => (srv.close(), pool.end()));
@@ -72,6 +76,27 @@ test('roles contra PostgreSQL', { skip: !process.env.DB_PASSWORD && 'sin DB_PASS
   assert.equal(kardex.cursadas, kardex.materias.length);
   assert.equal((await api(`/kardex?alumno_id=${caso.alumno_id}`, null, maria.token)).status, 403);
   assert.equal((await api(`/kardex?alumno_id=${caso.alumno_id}`, null, admin.token)).body.cursadas, kardex.cursadas);
+
+  // Constancia en PDF y su verificación pública
+  const r = await fetch(url + '/constancias', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${alumno.token}` },
+    body: JSON.stringify({ tipo: 'calificaciones' }),
+  });
+  assert.equal(r.headers.get('content-type'), 'application/pdf');
+  assert.equal((await r.arrayBuffer()).byteLength > 1000, true);
+  const { rows: [k] } = await pool.query('SELECT folio, codigo_verificacion FROM constancias WHERE alumno_id = $1 ORDER BY created_at DESC LIMIT 1', [caso.alumno_id]);
+  assert.equal((await api(`/constancias/verificar?folio=${k.folio}&codigo=${k.codigo_verificacion}`)).body.matricula, caso.matricula);
+  assert.equal((await api(`/constancias/verificar?folio=${k.folio}&codigo=MAL`)).body.valida, false);
+  assert.equal((await api('/constancias', { tipo: 'estudios', alumno_id: caso.alumno_id }, maria.token)).status, 403);
+
+  // Reportes
+  const escuela = (await api('/reportes/escuela', null, admin.token)).body;
+  assert.equal(escuela.length, 16);
+  assert.equal((await api('/reportes/escuela', null, maria.token)).status, 403);
+  const reporte = (await api(`/reportes/grupo/${g.grupo_id}`, null, maria.token)).body;
+  assert.equal(reporte.length, 4);
+  const ajeno = escuela.find((x) => !cat.grupos.some((cg) => cg.id === x.grupo_id)).grupo_id;
+  assert.equal((await api(`/reportes/grupo/${ajeno}`, null, maria.token)).status, 403);
 
   assert.equal((await api('/alertas', null, alumno.token)).status, 403);
   assert.ok(Array.isArray((await api('/alertas', null, admin.token)).body));

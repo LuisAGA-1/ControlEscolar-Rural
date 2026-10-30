@@ -10,6 +10,9 @@ import Horario from './paginas/Horario.jsx'
 import Alertas from './paginas/Alertas.jsx'
 import Alumnos from './paginas/Alumnos.jsx'
 import { MisCalificaciones, Kardex } from './paginas/Alumno.jsx'
+import Constancias from './paginas/Constancias.jsx'
+import Reportes from './paginas/Reportes.jsx'
+import Verificar from './paginas/Verificar.jsx'
 
 // Página → [texto del menú, ícono, componente]
 const PAGINAS = {
@@ -19,13 +22,15 @@ const PAGINAS = {
   captura: ['Calificaciones', 'bi-journal-text', Captura],
   calificaciones: ['Mis calificaciones', 'bi-journal-text', MisCalificaciones],
   kardex: ['Kárdex', 'bi-card-list', Kardex],
+  constancias: ['Constancias', 'bi-file-earmark-text', Constancias],
+  reportes: ['Reportes', 'bi-bar-chart', Reportes],
   horario: ['Horario', 'bi-clock', Horario],
   alertas: ['Alertas de rezago', 'bi-exclamation-triangle', Alertas],
 }
 const MENU = {
-  administrador: ['inicio', 'alumnos', 'lista', 'captura', 'horario', 'alertas'],
-  docente: ['inicio', 'lista', 'captura', 'horario', 'alertas'],
-  alumno: ['inicio', 'calificaciones', 'kardex', 'horario'],
+  administrador: ['inicio', 'alumnos', 'reportes', 'lista', 'captura', 'horario', 'alertas'],
+  docente: ['inicio', 'lista', 'captura', 'reportes', 'horario', 'alertas'],
+  alumno: ['inicio', 'calificaciones', 'kardex', 'constancias', 'horario'],
 }
 
 const paginaDeLaUrl = () => location.hash.slice(1)
@@ -44,6 +49,7 @@ export default function App() {
     return () => { removeEventListener('hashchange', cambio); removeEventListener('sesion-vencida', salir) }
   }, [])
 
+  if (hash === 'verificar') return <Verificar /> // pública, con o sin sesión
   if (!actual) return <Login onEntrar={() => setActual(sesion.leer())} />
   return <Portal usuario={actual.usuario} hash={hash} menuAbierto={menuAbierto} setMenuAbierto={setMenuAbierto} salir={salir} />
 }
