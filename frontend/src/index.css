@@ -3,7 +3,6 @@ body { margin: 0; }
 header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 16px; background: #1f6f50; color: #fff; }
 header .usuario { margin-left: auto; }
 header a { color: #fff; }
-.ok { color: #b8f5d0; } .off { color: #ffd27a; }
 nav { display: flex; gap: 4px; padding: 8px 16px 0; overflow-x: auto; }
 nav button.activa { background: #1f6f50; color: #fff; }
 main { padding: 16px; max-width: 900px; overflow-x: auto; }

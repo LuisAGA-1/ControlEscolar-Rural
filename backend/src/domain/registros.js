@@ -24,13 +24,9 @@ export function validarCalificacion(c) {
   return { alumno_id: c.alumno_id, materia_id: c.materia_id, parcial: Number(c.parcial), calificacion: valor };
 }
 
-export function validarLote(l) {
-  exigir(UUID.test(l?.id ?? ''), 'lote: id debe ser un UUID generado en el dispositivo');
-  exigir(typeof l.dispositivo_id === 'string' && l.dispositivo_id.length > 0, 'lote: falta dispositivo_id');
+export function validarRegistros(r) {
   return {
-    id: l.id,
-    dispositivo_id: l.dispositivo_id.slice(0, 60),
-    asistencias: (l.asistencias ?? []).map(validarAsistencia),
-    calificaciones: (l.calificaciones ?? []).map(validarCalificacion),
+    asistencias: (r?.asistencias ?? []).map(validarAsistencia),
+    calificaciones: (r?.calificaciones ?? []).map(validarCalificacion),
   };
 }

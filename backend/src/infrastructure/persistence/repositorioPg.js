@@ -51,32 +51,20 @@ export function crearRepositorioPg(pool) {
       return { grupos, alumnos, materias, horarios };
     },
 
-    async guardarLote(usuarioId, lote) {
+    async guardarRegistros(usuarioId, { asistencias, calificaciones }) {
       const c = await pool.connect();
       try {
         await c.query('BEGIN');
-        const nuevo = await c.query(
-          `INSERT INTO sync_lotes (id, dispositivo_id, usuario_id, total_registros)
-           VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`,
-          [lote.id, lote.dispositivo_id, usuarioId, lote.asistencias.length + lote.calificaciones.length]
-        );
-        if (nuevo.rowCount === 0) {
-          await c.query('ROLLBACK');
-          return { duplicado: true }; // reintento de un lote ya guardado: no se procesa doble
-        }
-        // shortcut: gana el último lote que llega al servidor; para "last-write-wins" por hora
-        // de captura en el dispositivo, agregar una columna capturado_at y compararla aquí.
-        for (const a of lote.asistencias) {
+        for (const a of asistencias) {
           await c.query(
-            `INSERT INTO asistencias (alumno_id, docente_id, fecha, estado, observacion, dispositivo_id)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO asistencias (alumno_id, docente_id, fecha, estado, observacion)
+             VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT (alumno_id, fecha) DO UPDATE
-               SET estado = EXCLUDED.estado, observacion = EXCLUDED.observacion,
-                   docente_id = EXCLUDED.docente_id, dispositivo_id = EXCLUDED.dispositivo_id`,
-            [a.alumno_id, usuarioId, a.fecha, a.estado, a.observacion, lote.dispositivo_id]
+               SET estado = EXCLUDED.estado, observacion = EXCLUDED.observacion, docente_id = EXCLUDED.docente_id`,
+            [a.alumno_id, usuarioId, a.fecha, a.estado, a.observacion]
           );
         }
-        for (const k of lote.calificaciones) {
+        for (const k of calificaciones) {
           await c.query(
             `INSERT INTO calificaciones (alumno_id, materia_id, docente_id, parcial, calificacion)
              VALUES ($1, $2, $3, $4, $5)
@@ -86,7 +74,7 @@ export function crearRepositorioPg(pool) {
           );
         }
         await c.query('COMMIT');
-        return { duplicado: false, asistencias: lote.asistencias.length, calificaciones: lote.calificaciones.length };
+        return { asistencias: asistencias.length, calificaciones: calificaciones.length };
       } catch (e) {
         await c.query('ROLLBACK');
         throw e;

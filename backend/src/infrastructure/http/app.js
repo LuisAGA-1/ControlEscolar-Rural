@@ -30,7 +30,7 @@ export function crearApp({ casos, secreto, ping }) {
   app.get('/api/health', ruta(ping));
   app.post('/api/auth/login', ruta((req) => casos.iniciarSesion(req.body.email, req.body.password)));
   app.get('/api/catalogo', autenticado, ruta((req) => casos.catalogo(req.usuario)));
-  app.post('/api/sync/lote', autenticado, ruta((req) => casos.sincronizarLote(req.usuario, req.body)));
+  app.post('/api/registros', autenticado, ruta((req) => casos.guardarRegistros(req.usuario, req.body)));
   app.get('/api/alertas', autenticado, ruta((req) => casos.alertas(req.usuario)));
   return app;
 }

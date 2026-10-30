@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { local, registrar, hoy, alertasLocales } from './sync.js'
+import { local, registrar, hoy } from './api.js'
 
 const ESTADOS = [['presente', 'P'], ['falta', 'F'], ['retardo', 'R'], ['justificada', 'J']]
 const nombreGrupo = (g) => `${g.grado}°${g.letra} (${g.ciclo})`
 
 function useGrupo() {
   const { grupos, alumnos } = local.catalogo()
-  const [grupoId, setGrupoId] = useState(grupos[0]?.id ?? '')
+  const [elegido, setGrupoId] = useState('')
+  const grupoId = elegido || grupos[0]?.id || '' // el catálogo llega después del primer render
   const selector = (
     <label>Grupo{' '}
       <select value={grupoId} onChange={(e) => setGrupoId(e.target.value)}>
@@ -21,7 +22,7 @@ export function PasarLista({ onCambio }) {
   const [alumnos, selector, hayGrupos] = useGrupo()
   const [fecha, setFecha] = useState(hoy)
   const asis = local.registros().asis
-  const marcar = (alumno_id, estado) => { registrar('asis', `${alumno_id}|${fecha}`, { alumno_id, fecha, estado }); onCambio() }
+  const marcar = (alumno_id, estado) => registrar('asis', `${alumno_id}|${fecha}`, { alumno_id, fecha, estado }).then(() => onCambio(), (e) => onCambio(e.message))
   if (!hayGrupos) return <p>No tienes grupos asignados todavía.</p>
   return (
     <section>
@@ -48,7 +49,7 @@ export function PasarLista({ onCambio }) {
           })}
         </tbody>
       </table>
-      <p className="nota">P presente · F falta · R retardo · J justificada. Se guarda en el dispositivo y se sube al haber conexión.</p>
+      <p className="nota">P presente · F falta · R retardo · J justificada. Se guarda al momento.</p>
     </section>
   )
 }
@@ -56,7 +57,8 @@ export function PasarLista({ onCambio }) {
 export function Calificaciones({ onCambio }) {
   const [alumnos, selector, hayGrupos] = useGrupo()
   const { materias } = local.catalogo()
-  const [materiaId, setMateriaId] = useState(materias[0]?.id ?? '')
+  const [elegida, setMateriaId] = useState('')
+  const materiaId = elegida || materias[0]?.id || ''
   const [parcial, setParcial] = useState(1)
   const cal = local.registros().cal
   if (!hayGrupos) return <p>No tienes grupos asignados todavía.</p>
@@ -64,7 +66,7 @@ export function Calificaciones({ onCambio }) {
     const calificacion = Number(texto)
     if (texto === '' || !(calificacion >= 0 && calificacion <= 10)) return // fuera de 0-10 no se guarda
     registrar('cal', `${alumno_id}|${materiaId}|${parcial}`, { alumno_id, materia_id: materiaId, parcial, calificacion })
-    onCambio()
+      .then(() => onCambio(), (e) => onCambio(e.message))
   }
   return (
     <section>
@@ -119,12 +121,8 @@ export function Horario() {
 
 export function Alertas() {
   const servidor = local.alertas()
-  const enDispositivo = alertasLocales(local.catalogo().alumnos)
   return (
     <section>
-      <h3>Detectadas en este dispositivo (sin internet)</h3>
-      {enDispositivo.length ? <ul>{enDispositivo.map((a) => <li key={a.alumno} className="alerta amarilla">{a.alumno}: {a.detalle}</li>)}</ul> : <p>Ninguna.</p>}
-      <h3>Alertas del servidor</h3>
       {servidor.length ? (
         <ul>
           {servidor.map((a) => (
@@ -133,7 +131,7 @@ export function Alertas() {
             </li>
           ))}
         </ul>
-      ) : <p>Ninguna (se actualizan al sincronizar).</p>}
+      ) : <p>Ninguna.</p>}
     </section>
   )
 }
