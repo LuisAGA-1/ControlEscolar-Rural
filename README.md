@@ -4,9 +4,9 @@ Portal escolar para **administradores, docentes y alumnos** (calificaciones, con
 **bot de Telegram** que hace lo mismo mediante un flujo de n8n con Ollama. React + Node.js sobre Ubuntu, con
 arquitectura hexagonal en el backend.
 
-> En migración. Listas: Fase 0 (estructura nueva, sin modo offline), Fase 1 (modelo universitario, tres roles con
+> Migración terminada: Fase 0 (estructura nueva, sin modo offline), Fase 1 (modelo universitario, tres roles con
 > permisos, login con matrícula, kárdex), Fase 2 (portal por rol con diseño de vidrio) y Fase 3 (constancias en PDF
-> con folio verificable y reportes) y Fase 4 (bot de Telegram con n8n + Ollama). Sigue la instalación completa en Ubuntu.
+> con folio verificable y reportes), Fase 4 (bot de Telegram con n8n + Ollama) y Fase 5 (instalación con Docker Compose).
 
 | Carpeta | Qué es |
 |---|---|
@@ -42,7 +42,10 @@ arquitectura hexagonal en el backend.
 | Adaptador de salida | `infrastructure/pdf/constanciaPdf.js` | Constancias en PDF (pdfkit) |
 | Arranque | `main.js` | Conecta todo (inyección de dependencias) |
 
-## Correrlo en Ubuntu (WSL)
+## Instalarlo
+**[INSTALACION.md](INSTALACION.md)**: todo con `docker compose up -d` (base, API, portal, n8n, Ollama y túnel para Telegram).
+
+## Desarrollo sin Docker (WSL)
 ```bash
 # 1) Base nueva (si ya tenías control_escolar de la versión de primaria, bórrala o usa otro nombre)
 createdb control_escolar
