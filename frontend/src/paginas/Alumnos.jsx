@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Encabezado } from '../componentes.jsx'
 import { nombreGrupo } from '../formato.js'
 import { MisCalificaciones, Kardex } from './Alumno.jsx'
+import Constancias from './Constancias.jsx'
 
 // Administración: busca un alumno y consulta su situación académica.
 export default function Alumnos({ catalogo }) {
@@ -17,6 +18,7 @@ export default function Alumnos({ catalogo }) {
         <Encabezado titulo={elegido.nombre} detalle={`${elegido.matricula} · ${grupo[elegido.grupo_id]}`}>
           <button className="btn-secundario" onClick={() => setElegido(null)}><i className="bi bi-arrow-left" /> Volver a la lista</button>
         </Encabezado>
+        <Constancias alumnoId={elegido.id} />
         <MisCalificaciones alumnoId={elegido.id} />
         <Kardex alumnoId={elegido.id} />
       </>

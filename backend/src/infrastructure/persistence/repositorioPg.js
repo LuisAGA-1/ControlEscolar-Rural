@@ -7,6 +7,9 @@ function hostDeWindows() {
   return execSync("ip route show default | awk '{print $3}'").toString().trim();
 }
 
+// Las columnas DATE llegan como texto 'AAAA-MM-DD' y no como Date a medianoche local (evita días corridos).
+pg.types.setTypeParser(1082, (v) => v);
+
 export function crearPool(env = process.env) {
   const host = env.DB_HOST === 'windows' ? hostDeWindows() : env.DB_HOST || 'localhost';
   return new pg.Pool({
@@ -123,8 +126,8 @@ export function crearRepositorioPg(pool) {
     async imparte(docenteId, grupoId, materiaId) {
       const rows = await filas(
         `SELECT 1 FROM horarios h JOIN grupos g ON g.id = h.grupo_id JOIN periodos p ON p.id = g.periodo_id AND p.activo
-          WHERE h.docente_id = $1 AND h.grupo_id = $2 AND h.materia_id = $3 LIMIT 1`,
-        [docenteId, grupoId, materiaId]
+          WHERE h.docente_id = $1 AND h.grupo_id = $2 AND ($3::uuid IS NULL OR h.materia_id = $3) LIMIT 1`,
+        [docenteId, grupoId, materiaId ?? null]
       );
       return rows.length > 0;
     },
@@ -165,6 +168,80 @@ export function crearRepositorioPg(pool) {
         `SELECT clave, materia, semestre, creditos, periodo, tipo, calificacion, aprobada
            FROM v_kardex WHERE alumno_id = $1 ORDER BY semestre, clave`,
         [alumnoId]
+      ),
+
+    async datosAlumno(alumnoId) {
+      return (
+        await filas(
+          `SELECT u.nombre, a.matricula, a.semestre, a.curp, c.nombre AS carrera, g.letra AS grupo,
+                  p.clave AS periodo, p.inicio, p.fin, e.nombre AS escuela, e.municipio
+             FROM alumnos a
+             JOIN usuarios u ON u.id = a.usuario_id
+             JOIN carreras c ON c.id = a.carrera_id
+             JOIN escuelas e ON e.id = c.escuela_id
+             LEFT JOIN grupos g ON g.id = a.grupo_id
+             LEFT JOIN periodos p ON p.activo
+            WHERE a.id = $1`,
+          [alumnoId]
+        )
+      )[0];
+    },
+
+    async guardarConstancia({ folio, codigo, alumno_id, tipo, emitida_por }) {
+      await pool.query(
+        `INSERT INTO constancias (folio, codigo_verificacion, alumno_id, tipo, emitida_por) VALUES ($1, $2, $3, $4, $5)`,
+        [folio, codigo, alumno_id, tipo, emitida_por]
+      );
+    },
+
+    async buscarConstancia(folio, codigo) {
+      return (
+        await filas(
+          `SELECT k.folio, k.tipo, k.created_at, u.nombre AS alumno, a.matricula, c.nombre AS carrera
+             FROM constancias k
+             JOIN alumnos a ON a.id = k.alumno_id
+             JOIN usuarios u ON u.id = a.usuario_id
+             JOIN carreras c ON c.id = a.carrera_id
+            WHERE k.folio = $1 AND k.codigo_verificacion = $2`,
+          [folio, codigo]
+        )
+      )[0];
+    },
+
+    // Asistencia = presentes y retardos entre todas las clases registradas.
+    reporteGrupo: (grupoId) =>
+      filas(
+        `WITH materias_grupo AS (
+           SELECT DISTINCT h.materia_id, h.docente_id FROM horarios h WHERE h.grupo_id = $1
+         ), por_alumno AS (
+           SELECT k.materia_id, k.alumno_id, AVG(k.calificacion) AS prom
+             FROM calificaciones k JOIN alumnos a ON a.id = k.alumno_id AND a.grupo_id = $1
+             JOIN periodos p ON p.id = k.periodo_id AND p.activo
+            GROUP BY k.materia_id, k.alumno_id
+         )
+         SELECT m.id AS materia_id, m.nombre AS materia, u.nombre AS docente,
+                (SELECT ROUND(AVG(prom), 2) FROM por_alumno pa WHERE pa.materia_id = m.id) AS promedio,
+                (SELECT COUNT(*) FROM por_alumno pa WHERE pa.materia_id = m.id AND pa.prom < 6)::int AS reprobados,
+                (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE s.estado IN ('presente', 'retardo')) / NULLIF(COUNT(*), 0), 1)
+                   FROM asistencias s JOIN alumnos a ON a.id = s.alumno_id AND a.grupo_id = $1
+                  WHERE s.materia_id = m.id) AS asistencia
+           FROM materias_grupo mg JOIN materias m ON m.id = mg.materia_id JOIN usuarios u ON u.id = mg.docente_id
+          ORDER BY m.clave`,
+        [grupoId]
+      ),
+
+    reporteEscuela: () =>
+      filas(
+        `SELECT g.id AS grupo_id, ${NOMBRE_GRUPO} AS grupo, c.nombre AS carrera,
+                (SELECT COUNT(*) FROM alumnos a WHERE a.grupo_id = g.id)::int AS alumnos,
+                (SELECT ROUND(AVG(k.calificacion), 2) FROM calificaciones k JOIN alumnos a ON a.id = k.alumno_id
+                  WHERE a.grupo_id = g.id AND k.periodo_id = g.periodo_id) AS promedio,
+                (SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE s.estado IN ('presente', 'retardo')) / NULLIF(COUNT(*), 0), 1)
+                   FROM asistencias s JOIN alumnos a ON a.id = s.alumno_id WHERE a.grupo_id = g.id) AS asistencia,
+                (SELECT COUNT(*) FROM alertas_rezago r JOIN alumnos a ON a.id = r.alumno_id
+                  WHERE a.grupo_id = g.id AND NOT r.atendida)::int AS alertas
+           FROM grupos g JOIN carreras c ON c.id = g.carrera_id JOIN periodos p ON p.id = g.periodo_id AND p.activo
+          ORDER BY c.clave, g.semestre, g.letra`
       ),
 
     async generarAlertas() {

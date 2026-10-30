@@ -34,3 +34,9 @@ test('el alumno solo se consulta a sí mismo', () => {
   assert.throws(() => alumnoConsultado({ rol: 'docente' }), ErrorPermiso);
   assert.throws(() => exigirRol({ rol: 'alumno' }, 'administrador', 'docente'), ErrorPermiso);
 });
+
+test('folio y código de la constancia salen del texto aleatorio', async () => {
+  const { crearFolio, validarTipoConstancia } = await import('../src/domain/constancias.js');
+  assert.deepEqual(crearFolio(new Date(2026, 9, 30), 'a1b2c3d4e5f6a7b8'), { folio: 'FCA-2026-A1B2C3D4', codigo: 'E5F6A7B8' });
+  assert.throws(() => validarTipoConstancia('titulo'));
+});

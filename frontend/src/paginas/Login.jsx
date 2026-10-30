@@ -54,6 +54,7 @@ export default function Login({ onEntrar }) {
           </div>
           <button className="btn-primario ancho" disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'} <i className="bi bi-arrow-right" /></button>
           <p className="text-muted small">¿Olvidaste tu contraseña? Solicítala en servicios escolares.</p>
+          <p className="small"><a href="#verificar"><i className="bi bi-patch-check" /> Verificar una constancia</a></p>
         </form>
       </section>
     </div>
