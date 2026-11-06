@@ -51,7 +51,8 @@ docker compose logs tunel | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com'
 3. En el portal abre **Bot de Telegram**, genera el código y mándale al bot `/vincular 123456`.
 
 La dirección del túnel gratuito cambia cada vez que arranca el servicio `tunel`, también al reiniciar la
-computadora o WSL. Cuando cambie, repite el paso 1 y desactiva y vuelve a activar el flujo en n8n. Para una
+computadora o WSL. Cada vez que prendas la máquina ejecuta `./actualizar-tunel.sh`: levanta todo, copia la
+dirección nueva a `.env` y reinicia n8n. Después desactiva y vuelve a activar el flujo en n8n. Para una
 dirección fija hace falta una cuenta de Cloudflare con un túnel con nombre, o un servidor con dominio propio.
 
 ## Día a día
