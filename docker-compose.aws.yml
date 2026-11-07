@@ -1,0 +1,28 @@
+# Agregado para el servidor de AWS (ver DESPLIEGUE-AWS.md). Se activa con esta línea en .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.aws.yml
+# Caddy pone https con certificado gratuito de Let's Encrypt en el dominio de DOMINIO y reparte:
+# /webhook/* a n8n (Telegram) y todo lo demás al portal. Ya no hace falta el túnel.
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on: [web, n8n]
+    environment:
+      DOMINIO: ${DOMINIO:?pon DOMINIO en .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./aws/Caddyfile:/etc/caddy/Caddyfile:ro
+      - datos-caddy:/data
+
+  n8n:
+    environment:
+      N8N_PROXY_HOPS: "1" # n8n queda detrás de Caddy
+
+  # El túnel solo arranca si se pide a mano (docker compose --profile tunel up -d).
+  tunel:
+    profiles: [tunel]
+
+volumes:
+  datos-caddy:

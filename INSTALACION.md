@@ -74,7 +74,5 @@ systemd ni pm2. En WSL, Docker arranca al abrir Ubuntu.
   `qwen2.5:7b`, y cambiarlo también en el nodo Ollama del flujo.
 - **pgAdmin de Windows:** conéctate a `localhost`, puerto `5433`, usuario `postgres` y la `DB_PASSWORD` de `.env`.
   Esta base es otra; la de pgAdmin (puerto 5432) no se toca.
-- **Un servidor real:** cambia `URL_PUBLICA` por la dirección del sitio (se imprime en las constancias) y pon
-  https delante del puerto 8080 (por ejemplo, Caddy o nginx con certbot). En lugar del túnel gratuito, usa un
-  túnel con nombre o el dominio propio en `WEBHOOK_URL`.
+- **Un servidor real:** para AWS (EC2 con https y dominio fijo, sin túnel) sigue [DESPLIEGUE-AWS.md](DESPLIEGUE-AWS.md).
 - **Desarrollo sin Docker:** sigue el README (backend con `npm run dev` y frontend con Vite).
