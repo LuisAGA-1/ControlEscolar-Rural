@@ -1,0 +1,7 @@
+{$DOMINIO} {
+	encode gzip
+	# Webhooks del flujo de n8n (Telegram). El editor de n8n no se publica: se usa con un túnel SSH.
+	@n8n path /webhook/* /webhook-test/*
+	reverse_proxy @n8n n8n:5678
+	reverse_proxy web:80
+}
