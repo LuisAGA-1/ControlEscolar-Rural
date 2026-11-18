@@ -1,0 +1,28 @@
+# Instancia FRONT (ver DESPLIEGUE-AWS.md): la única abierta a internet.
+# Caddy pone https (Let's Encrypt) y reparte: /api a la API y /webhook a n8n (ambos en BACK), lo demás al portal.
+name: control-escolar-front
+
+services:
+  web:
+    build:
+      context: ../../frontend
+      args:
+        VITE_BOT_TELEGRAM: ${VITE_BOT_TELEGRAM:-}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    environment:
+      DOMINIO: ${DOMINIO:?pon DOMINIO en .env}
+      IP_BACK: ${IP_BACK:?pon IP_BACK en .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - datos-caddy:/data
+
+volumes:
+  datos-caddy:
