@@ -1,0 +1,53 @@
+# Instancia BACK (ver DESPLIEGUE-AWS.md): API + bot (n8n y Ollama). La base está en la instancia BD (IP_BD).
+# El security group solo deja entrar al 3000 y al 5678 a la instancia FRONT. Los nombres api y ollama
+# son los mismos que en el compose de la raíz, así que el flujo n8n/bot-siae.json funciona sin cambios.
+name: control-escolar-back
+
+services:
+  api:
+    build: ../../backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${IP_BD:?pon IP_BD en .env}
+      DB_PASSWORD: ${DB_PASSWORD:?pon DB_PASSWORD en .env}
+      JWT_SECRET: ${JWT_SECRET:?pon JWT_SECRET en .env}
+      BOT_API_TOKEN: ${BOT_API_TOKEN:?pon BOT_API_TOKEN en .env}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      URL_PUBLICA: https://${DOMINIO:?pon DOMINIO en .env}
+      TZ: America/Mexico_City
+    ports:
+      - "3000:3000"
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    restart: unless-stopped
+    volumes:
+      - modelos-ollama:/root/.ollama
+
+  # Descarga el modelo una vez (queda en el volumen) y termina.
+  ollama-modelo:
+    image: ollama/ollama:0.12.6
+    depends_on: [ollama]
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["sh", "-c", "sleep 3 && ollama pull ${OLLAMA_MODELO:-qwen2.5:3b}"]
+    restart: "no"
+
+  n8n:
+    image: n8nio/n8n:2.45.7
+    restart: unless-stopped
+    depends_on: [api, ollama]
+    environment:
+      N8N_WEBHOOK_URL: https://${DOMINIO}/ # Telegram llega por el Caddy de FRONT
+      N8N_PROXY_HOPS: "1"
+      GENERIC_TIMEZONE: America/Mexico_City
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      TZ: America/Mexico_City
+    volumes:
+      - datos-n8n:/home/node/.n8n
+    ports:
+      - "5678:5678"
+
+volumes:
+  modelos-ollama:
+  datos-n8n:

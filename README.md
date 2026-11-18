@@ -44,6 +44,7 @@ arquitectura hexagonal en el backend.
 
 ## Instalarlo
 **[INSTALACION.md](INSTALACION.md)**: todo con `docker compose up -d` (base, API, portal, n8n, Ollama y túnel para Telegram).
+En AWS con 3 instancias (FRONT, BACK y BD): **[DESPLIEGUE-AWS.md](DESPLIEGUE-AWS.md)**.
 
 ## Desarrollo sin Docker (WSL)
 ```bash
